@@ -1,4 +1,4 @@
-(in-package #:info.read-eval-print.nando)
+(in-package :info.read-eval-print.nando)
 
 (defgeneric root (root key)
   (:documentation "get a value of the key from the root."))

@@ -1,4 +1,4 @@
-(in-package #:info.read-eval-print.nando)
+(in-package :info.read-eval-print.nando)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Serialize

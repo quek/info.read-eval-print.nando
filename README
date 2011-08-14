@@ -1,2 +1,29 @@
 Rucksack (http://common-lisp.net/project/rucksack/) をパクって^H^H^H^Hおおいに参考にして、
 パーシステントライブラリを勉強がてら書いてみる試み。
+
+
+* ファイル
+
+ルートファイ。
+クラス毎にインデックスファイルとオブジェクトファイル。
+
+ファイルを分割すると proxy は object-id に加えて クラスも保持する必要がある。
+
+* 構成
+
+root は生のハッシュ。root-table
+
+root-table に "class-tree" : object-id of btree を入れておく。
+
+root-table("class-tree") => object-id of btree(persisitent-class) ... class-tree
+
+class-tree はキーがクラス（シンボル）、値が btree ... instance-table
+instance-table はクラス毎に保持する。
+
+instance-table はキーが object-id、値がオブジェクト（インスタンス）
+
+object-id はヒープファイル中のファイルポジション。
+
+
+
+ファイルの分割は？

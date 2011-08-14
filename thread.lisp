@@ -1,4 +1,4 @@
-(in-package #:info.read-eval-print.nando)
+(in-package :info.read-eval-print.nando)
 
 (defstruct rw-lock
   (mutex (bordeaux-threads:make-lock))

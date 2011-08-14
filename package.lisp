@@ -2,8 +2,12 @@
 
 (macrolet ((m ()
              `(defpackage :info.read-eval-print.nando
-                (:use :cl :anaphora :series)
+                (:use :cl :anaphora :closer-mop :series)
                 (:shadowing-import-from :series ,@series::/series-forms/)
+                (:shadowing-import-from :cl
+                                        #:defmethod
+                                        #:defgeneric
+                                        #:standard-generic-function)
                 (:export :value
                          :open-db
                          :close-db))))

@@ -1,4 +1,4 @@
-(in-package #:info.read-eval-print.nando)
+(in-package :info.read-eval-print.nando)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (defun progs-body (var body)

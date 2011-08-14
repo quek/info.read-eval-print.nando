@@ -1,6 +1,6 @@
 ;;;; info.read-eval-print.nando.asd
 
-(asdf:defsystem #:info.read-eval-print.nando
+(asdf:defsystem :info.read-eval-print.nando
   :serial t
   :components ((:file "package")
                (:file "type")
@@ -9,8 +9,12 @@
                (:file "serialize")
                (:file "heap")
                (:file "root")
+               (:file "mop")
+               (:file "objects")
+               (:file "p-btrees")
                (:file "nando"))
-  :depends-on (#:bordeaux-threads
-               #:anaphora
-               #:series))
+  :depends-on (:bordeaux-threads
+               :anaphora
+               :series
+               :closer-mop))
 
