@@ -27,10 +27,15 @@
            (loaded (load-object object-id)))
       (is (= 123 (slot-value loaded 'a)))
       (is (string= "hello" (slot-value loaded 'b)))
+
+      (setf (slot-value loaded 'b) "こんにちは")
+      (setf loaded (load-object object-id))
+      (is (string= "こんにちは" (slot-value loaded 'b)))
+
       (is (= 1 (collect-length (scan* 'foo))))
       (let ((first (collect-first (scan* 'foo))))
         (is (= 123 (slot-value first 'a)))
-        (is (string= "hello" (slot-value first 'b))))
+        (is (string= "こんにちは" (slot-value first 'b))))
       (make-instance 'foo)
       (is (= 2 (collect-length (scan* 'foo)))))))
 

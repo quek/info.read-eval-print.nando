@@ -2,10 +2,16 @@
 
 (defparameter *key-prefix* "cl:")
 
+(defun clear-strage ()
+  (iterate ((key (scan (redis:red-keys (key "*")))))
+    (redis:red-del key)))
+
 (defun key (key)
-  (concatenate 'string *key-prefix* (princ-to-string key)))
+  (with-standard-io-syntax
+    (concatenate 'string *key-prefix* (princ-to-string key))))
 
 ;; (redis:connect)
+
 (defun new-object-id ()
   (red:incr (key "*object-id*")))
 
@@ -17,15 +23,15 @@
   (let ((key (key object-id)))
     (redis:red-hgetall key)))
 
-(defun clear-strage ()
-  (iterate ((key (scan (redis:red-keys (key "*")))))
-    (redis:red-del key)))
-
 (defun add-class-index (class object-id)
   (redis:red-sadd (key (class-name class)) object-id ))
 
 (defun load-class-index (class)
   (redis:red-smembers (key (class-name class))))
+
+(defun save-slot-value (object-id slot value)
+  (redis:red-hset (key object-id) slot value ))
+
 
 #|
 (redis:connect)

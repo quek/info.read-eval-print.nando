@@ -81,14 +81,16 @@ inherit from this class."))
   (maybe-update-slot-info class)
   ;; If this is a persistent slot, tell the cache that this object
   ;; has changed. The cache will save it when necessary.
-  (let ((slot (slot-def-and-name class slot-name-or-def)))
+  (multiple-value-bind (slot slot-name) (slot-def-and-name class slot-name-or-def)
     (if (slot-persistence slot)
         (let* ((old-boundp (c2mop:slot-boundp-using-class class object slot-name-or-def))
-               (old-value
-                 (and old-boundp
-                      (c2mop:slot-value-using-class class object slot-name-or-def)))
+               (old-value (and old-boundp
+                               (c2mop:slot-value-using-class class object slot-name-or-def)))
                (result (call-next-method)))
+          (unless *initializing-instance*
+            (save-slot-value (object-id object) (serialize slot-name) (serialize new-value)))
           ;; Update indexes.
+          #+あとでね。
           (unless *initializing-instance*
             (rucksack-maybe-index-changed-slot (rucksack object)
                                                class object slot
