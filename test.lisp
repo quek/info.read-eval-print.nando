@@ -13,7 +13,7 @@
                            :in hu.dwim.stefil:root-suite))
 
 
-(defclass foo (persistent-object)
+(defclass foo ()
   ((a :initarg :a)
    (b :initarg :b))
   (:index t)
@@ -34,7 +34,7 @@
       (make-instance 'foo)
       (is (= 2 (collect-length (scan* 'foo)))))))
 
-(defclass not-index-foo (persistent-object)
+(defclass not-index-foo ()
   ()
   (:metaclass persistent-class))
 

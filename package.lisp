@@ -8,7 +8,6 @@
           #:clear-strage
 
           #:persistent-class
-          #:persistent-object
 
           #:object-id
           #:load-object))
