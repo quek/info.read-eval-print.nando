@@ -5,7 +5,7 @@
 (info.read-eval-print.series-ext:sdefpackage
  :info.read-eval-print.nando.test
  (:use :cl :anaphora :info.read-eval-print.nando)
- (:import-from :hu.dwim.stefil #:is))
+ (:import-from :hu.dwim.stefil #:is #:deftest))
 
 (in-package :info.read-eval-print.nando.test)
 
@@ -19,7 +19,7 @@
   (:index t)
   (:metaclass persistent-class))
 
-(hu.dwim.stefil:deftest test-foo ()
+(deftest test-foo ()
   (with-connection ()
     (clear-strage)
     (let* ((x (make-instance 'foo :a 123 :b "hello"))
@@ -33,6 +33,16 @@
         (is (string= "hello" (slot-value first 'b))))
       (make-instance 'foo)
       (is (= 2 (collect-length (scan* 'foo)))))))
+
+(defclass not-index-foo (persistent-object)
+  ()
+  (:metaclass persistent-class))
+
+(deftest test-not-index-foo ()
+  (with-connection ()
+    (clear-strage)
+    (make-instance 'not-index-foo)
+    (is (eql '() (collect (scan* 'not-index-foo))))))
 
 
 (info.read-eval-print.nando.test)
