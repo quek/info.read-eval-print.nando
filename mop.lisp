@@ -6,16 +6,22 @@
 ;;; MOP Magic
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defmethod saved-slots (object)
+  ;; Default: use the MOP to return a list of the names all effective slots.
+  (mapcar #'c2mop:slot-definition-name
+    #+lispworks(clos:class-effective-slots (class-of object))
+    #-lispworks(c2mop:class-slots (class-of object))))
+
 ;;;
 ;;; Metaclass PERSISTENT-CLASS
 ;;;
 
-(defclass persistent-class (standard-class)
+(defclass persistent-class (c2mop:standard-class)
   ((persistent-slots :initform '()
                      :accessor class-persistent-slots)
    (index :initarg :index :initform nil
           :documentation "Can be either NIL (for no class index) or T
-(for the standard class index).  Default value is NIL.")
+ (for the standard class index).  Default value is NIL.")
    (changed-p :initform nil :accessor class-changed-p
               :documentation "True iff the class definition was changed
 but the schemas haven't been updated yet.  This flag is necessary because
@@ -56,11 +62,11 @@ should only be used when speed is critical.
   The default value is NIL.")))
 
 (defclass persistent-direct-slot-definition
-    (persistent-slot-mixin standard-direct-slot-definition)
+    (persistent-slot-mixin c2mop:standard-direct-slot-definition)
   ())
 
 (defclass persistent-effective-slot-definition
-    (persistent-slot-mixin standard-effective-slot-definition)
+    (persistent-slot-mixin c2mop:standard-effective-slot-definition)
   ())
 
 
@@ -70,12 +76,12 @@ should only be used when speed is critical.
 
 (defun copy-slot-definition (slot-def)
   (make-instance (class-of slot-def)
-                 :name (slot-definition-name slot-def)
-                 :initargs (slot-definition-initargs slot-def)
-                 :readers (slot-definition-readers slot-def)
-                 :writers (slot-definition-writers slot-def)
-                 :allocation (slot-definition-allocation slot-def)
-                 :type (slot-definition-type slot-def)
+                 :name (c2mop:slot-definition-name slot-def)
+                 :initargs (c2mop:slot-definition-initargs slot-def)
+                 :readers (c2mop:slot-definition-readers slot-def)
+                 :writers (c2mop:slot-definition-writers slot-def)
+                 :allocation (c2mop:slot-definition-allocation slot-def)
+                 :type (c2mop:slot-definition-type slot-def)
                  ;; Our own options.
                  :persistence (slot-persistence slot-def)
                  :index (slot-index slot-def)
@@ -92,13 +98,13 @@ should only be used when speed is critical.
   "Returns three values: a list of added slots, a list of discarded slots
 and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
   (let ((added-slots (set-difference slots old-slots
-                                     :key #'slot-definition-name))
+                                     :key #'c2mop:slot-definition-name))
         (discarded-slots (set-difference old-slots slots
-                                         :key #'slot-definition-name))
+                                         :key #'c2mop:slot-definition-name))
         (changed-slots
          (loop for slot in slots
-               for old-slot = (find (slot-definition-name slot) old-slots
-                                    :key #'slot-definition-name)
+               for old-slot = (find (c2cl:slot-definition-name slot) old-slots
+                                    :key #'c2cl:slot-definition-name)
                if (and old-slot
                        (not (slot-definition-equal slot old-slot)))
                collect slot)))
@@ -107,13 +113,13 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod validate-superclass ((class standard-class)
-                                (superclass persistent-class))
+(defmethod c2mop:validate-superclass ((class c2mop:standard-class)
+                                      (superclass persistent-class))
   t)
 
 
-(defmethod validate-superclass ((class persistent-class)
-                                (superclass standard-class))
+(defmethod c2mop:validate-superclass ((class persistent-class)
+                                      (superclass c2mop:standard-class))
   t)
 
 
@@ -171,7 +177,7 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
             (eql class root-class)
             (find-if (lambda (direct-superclass)
                        (member persistent-class
-                               (compute-class-precedence-list
+                               (c2mop:compute-class-precedence-list
                                 (class-of direct-superclass))))
                      direct-superclasses))
         direct-superclasses
@@ -196,7 +202,7 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
 (defun update-slot-info (class)
   ;; Register all (effective) persistent slots.
   (setf (class-persistent-slots class)
-        (remove-if-not #'slot-persistence (class-slots class)))
+        (remove-if-not #'slot-persistence (c2mop:class-slots class)))
   ;; Update schemas if necessary.
   (when (fboundp 'current-rucksack) ; see comment for UPDATE-INDEXES
     (let ((rucksack (current-rucksack)))
@@ -214,26 +220,26 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
 ;;; Computing slot definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod direct-slot-definition-class ((class persistent-class)
-                                         &rest initargs)
+(defmethod c2mop:direct-slot-definition-class ((class persistent-class)
+                                              &rest initargs)
   (declare (ignore initargs))
   (find-class 'persistent-direct-slot-definition))
 
-(defmethod effective-slot-definition-class ((class persistent-class)
-                                            &rest initargs)
+(defmethod c2mop:effective-slot-definition-class ((class persistent-class)
+                                                  &rest initargs)
   (declare (ignore initargs))
   (find-class 'persistent-effective-slot-definition))
 
 
 
-(defmethod compute-effective-slot-definition ((class persistent-class)
-                                              slot-name
-                                              direct-slot-definitions)
+(defmethod c2mop:compute-effective-slot-definition ((class persistent-class)
+                                                    slot-name
+                                                    direct-slot-definitions)
   (let ((effective-slotdef (call-next-method))
         (persistent-slotdefs
-         (remove-if-not (lambda (slotdef)
-                          (typep slotdef 'persistent-direct-slot-definition))
-                        direct-slot-definitions)))
+          (remove-if-not (lambda (slotdef)
+                           (typep slotdef 'persistent-direct-slot-definition))
+                         direct-slot-definitions)))
 
     ;; If any direct slot is persistent, then the effective one is too.
     (setf (slot-value effective-slotdef 'persistence)
@@ -263,4 +269,3 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
 
     ;; Return the effective slot definition.
     effective-slotdef))
-

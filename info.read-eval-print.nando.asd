@@ -7,14 +7,17 @@
                (:file "util")
                (:file "thread")
                (:file "serialize")
-               (:file "heap")
+               (:file "strage")
                (:file "root")
                (:file "mop")
                (:file "objects")
-               (:file "p-btrees")
+               (:file "persistent-object")
+               (:file "scan")
                (:file "nando"))
   :depends-on (:bordeaux-threads
                :anaphora
-               :series
-               :closer-mop))
+               :closer-mop
+               :cl-redis
+               :hu.dwim.defclass-star
+               :info.read-eval-print.series-ext))
 

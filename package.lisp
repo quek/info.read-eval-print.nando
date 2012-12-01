@@ -1,16 +1,15 @@
-;;;; package.lisp
+(info.read-eval-print.series-ext:sdefpackage
+ :info.read-eval-print.nando
+ (:use :cl :anaphora)
+ (:import-from :hu.dwim.defclass-star #:defclass*)
+ (:import-from :redis #:*connection* #:with-connection)
+ (:export #:*connection*
+          #:with-connection
+          #:clear-strage
 
-(macrolet ((m ()
-             `(defpackage :info.read-eval-print.nando
-                (:use :cl :anaphora :closer-mop :series)
-                (:shadowing-import-from :series ,@series::/series-forms/)
-                (:shadowing-import-from :cl
-                                        #:defmethod
-                                        #:defgeneric
-                                        #:standard-generic-function)
-                (:export :value
-                         :open-db
-                         :close-db))))
-  (m))
+          #:persistent-class
+          #:persistent-object
 
-(series::install :pkg :info.read-eval-print.nando :implicit-map t)
+          #:object-id
+          #:load-object))
+
