@@ -44,11 +44,12 @@ inherit from this class."))
   "SLOT is a slot-definition, not a slot name."
   (let ((object-id (object-id object))
         (class-name (class-name class))
-        (slot-name (c2mop:slot-definition-name slot)))
+        (slot-name (c2mop:slot-definition-name slot))
+        (index-type (slot-index slot)))
     (when old-boundp
-      (delete-slot-index object-id class-name slot-name))
+      (delete-slot-index object-id class-name slot-name index-type old-value))
     (when new-boundp
-      (add-slot-index object-id class-name slot-name new-value))))
+      (add-slot-index object-id class-name slot-name index-type new-value))))
 
 
 

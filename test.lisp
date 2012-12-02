@@ -26,7 +26,7 @@
 
 (defclass foo ()
   ((a :initarg :a :accessor a :index t)
-   (b :initarg :b :accessor b)
+   (b :initarg :b :accessor b :index string)
    (c :initarg :c :accessor c :initform 0))
   (:index t)
   (:metaclass persistent-class))
@@ -57,6 +57,13 @@
     (collect-ignore (make-instance 'foo :a (scan-range :length 10)))
     (let ((x (collect-first (scan* 'foo :where '(= a 7)))))
       (is (= 7 (a x))))))
+
+(deftest test-were-=-string ()
+  (with-connection ()
+    (clear-strage)
+    (collect-ignore (make-instance 'foo :b (format nil "あい~a" (scan-range :length 10))))
+    (let ((x (collect-first (scan* 'foo :where '(= b "あい7")))))
+      (is (string= "あい7" (b x))))))
 
 (deftest test-where-in ()
   (with-connection ()

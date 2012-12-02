@@ -1,19 +1,21 @@
 (in-package :info.read-eval-print.nando)
 
-(defparameter *key-prefix* "cl:")
+(defparameter *key-prefix* "cl;")
 
 (defun clear-strage ()
   (iterate ((key (scan (redis:red-keys (key "*")))))
     (redis:red-del key)))
 
-(defun key (key)
+(defun key (&rest args)
   (with-standard-io-syntax
-    (concatenate 'string *key-prefix* (princ-to-string key))))
-
-;; (redis:connect)
+    (format nil "~a~{~a~^;~}" *key-prefix* (mapcar (lambda (x)
+                                                     (typecase x
+                                                       (string x)
+                                                       (t (prin1-to-string x))))
+                                                   args))))
 
 (defun new-object-id ()
-  (red:incr (key "*object-id*")))
+  (red:incr (key ";*object-id*")))
 
 (defun save-object-data (object-id &rest fields)
   (apply #'red:hmset (key object-id)
@@ -32,23 +34,40 @@
 (defun save-slot-value (object-id slot value)
   (redis:red-hset (key object-id) slot value ))
 
-(defun slot-index-key (class-name slot-name)
-  (with-standard-io-syntax
-    (key (concatenate 'string (princ-to-string class-name) ":" (princ-to-string slot-name)))))
+(defmethod add-slot-index (object-id class-name slot-name index-type slot-value)
+  (redis:red-zadd (key class-name slot-name) slot-value object-id))
 
-(defun add-slot-index (object-id class-name slot-name slot-value)
-  (redis:red-zadd (slot-index-key class-name slot-name) slot-value object-id))
+(defmethod add-slot-index (object-id class-name slot-name (index-type (eql 'string)) slot-value)
+  (redis:red-sadd (key class-name slot-name slot-value) object-id))
 
-(defun delete-slot-index (object-id class-name slot-name)
-  (redis:red-zrem (slot-index-key class-name slot-name) object-id))
+(defmethod delete-slot-index (object-id class-name index-type slot-name slot-value)
+  (redis:red-zrem (key class-name slot-name) object-id))
 
-(defun find-slot-index (class-name slot-name min &optional (max min))
-  (redis:red-zrangebyscore (slot-index-key class-name slot-name) min max))
+(defmethod delete-slot-index (object-id class-name (index-type (eql 'string)) slot-name slot-value)
+  (redis:red-zrem (key class-name slot-name slot-value) object-id))
+
+(defmethod find-slot-index (class-name slot-name index-type min &optional (max min))
+  (redis:red-zrangebyscore (key class-name slot-name) min max))
+
+(defmethod find-slot-index (class-name slot-name (index-type (eql 'string)) min &optional max)
+  (declare (ignore max))
+  (redis:red-smembers (key class-name slot-name min)))
 
 
 #|
 (redis:connect)
 ;;⇒ #<REDIS:REDIS-CONNECTION {100D676B53}>
+
+(redis:red-del 1)
+(redis:red-sadd 1 1)
+;;⇒ T
+(redis:red-exists 1)
+;;⇒ T
+(redis:red-srem 1 1)
+;;⇒ T
+(redis:red-exists 1)
+;;⇒ NIL
+
 
 (defclass foo ()
   ())

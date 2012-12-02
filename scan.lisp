@@ -22,8 +22,17 @@
 
 (defmethod where-to-function (class-name (op (eql '=)) args)
   (destructuring-bind (slot-name value) args
-    (find-slot-index class-name slot-name value)))
+    (let ((slot (collect-first
+                 (choose-if (lambda (x)
+                              (eq slot-name (c2mop:slot-definition-name x)))
+                            (scan (c2mop:class-slots (find-class class-name)))))))
+      (find-slot-index class-name slot-name (slot-index slot)  value))))
 
 (defmethod where-to-function (class-name (op (eql :in)) args)
   (destructuring-bind (slot-name &rest values) args
-    (collect-append (find-slot-index class-name slot-name (scan values)))))
+    (let ((slot-index (slot-index
+                       (collect-first
+                        (choose-if (lambda (x)
+                                     (eq slot-name (c2mop:slot-definition-name x)))
+                                   (scan (c2mop:class-slots (find-class class-name))))))))
+      (collect-append (find-slot-index class-name slot-name slot-index (scan values))))))
