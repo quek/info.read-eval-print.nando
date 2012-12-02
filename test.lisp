@@ -14,8 +14,8 @@
 
 
 (defclass foo ()
-  ((a :initarg :a)
-   (b :initarg :b))
+  ((a :initarg :a :accessor a)
+   (b :initarg :b :accessor b))
   (:index t)
   (:metaclass persistent-class))
 
@@ -25,19 +25,20 @@
     (let* ((x (make-instance 'foo :a 123 :b "hello"))
            (object-id (object-id x))
            (loaded (load-object object-id)))
-      (is (= 123 (slot-value loaded 'a)))
-      (is (string= "hello" (slot-value loaded 'b)))
+      (is (= 123 (a loaded)))
+      (is (string= "hello" (b loaded)))
 
-      (setf (slot-value loaded 'b) "こんにちは")
+      (setf (b loaded) "こんにちは")
       (setf loaded (load-object object-id))
-      (is (string= "こんにちは" (slot-value loaded 'b)))
+      (is (string= "こんにちは" (b loaded)))
 
       (is (= 1 (collect-length (scan* 'foo))))
       (let ((first (collect-first (scan* 'foo))))
-        (is (= 123 (slot-value first 'a)))
-        (is (string= "こんにちは" (slot-value first 'b))))
+        (is (= 123 (a first)))
+        (is (string= "こんにちは" (b first))))
       (make-instance 'foo)
       (is (= 2 (collect-length (scan* 'foo)))))))
+
 
 (defclass not-index-foo ()
   ()
@@ -48,6 +49,23 @@
     (clear-strage)
     (make-instance 'not-index-foo)
     (is (eql '() (collect (scan* 'not-index-foo))))))
+
+
+(deftest test-where-= ()
+  (with-connection ()
+    (clear-strage)
+    (collect-ignore (make-instance 'foo :a (scan-range :length 10)))
+    (let ((x (collect-first (scan* 'foo :where '(= a 7)))))
+      (is (= 7 (a x))))))
+
+(deftest test-where-in ()
+  (with-connection ()
+    (clear-strage)
+    (collect-ignore (make-instance 'foo :a (scan-range :length 10)))
+    (assert (= 4 (collect-length (scan* 'foo :where '(in a 2 3 7 9)))))
+    (iterate ((x (scan* 'foo :where '(in a 2 3 7 9))))
+      (assert (member (a x) '(2 3 7 9))))))
+
 
 
 (info.read-eval-print.nando.test)
