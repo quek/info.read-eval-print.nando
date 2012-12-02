@@ -13,8 +13,19 @@
                            :in hu.dwim.stefil:root-suite))
 
 
+(defclass not-index-foo ()
+  ()
+  (:metaclass persistent-class))
+
+(deftest test-not-index-foo ()
+  (with-connection ()
+    (clear-strage)
+    (make-instance 'not-index-foo)
+    (is (eql '() (collect (scan* 'not-index-foo))))))
+
+
 (defclass foo ()
-  ((a :initarg :a :accessor a)
+  ((a :initarg :a :accessor a :index t)
    (b :initarg :b :accessor b))
   (:index t)
   (:metaclass persistent-class))
@@ -40,16 +51,6 @@
       (is (= 2 (collect-length (scan* 'foo)))))))
 
 
-(defclass not-index-foo ()
-  ()
-  (:metaclass persistent-class))
-
-(deftest test-not-index-foo ()
-  (with-connection ()
-    (clear-strage)
-    (make-instance 'not-index-foo)
-    (is (eql '() (collect (scan* 'not-index-foo))))))
-
 
 (deftest test-where-= ()
   (with-connection ()
@@ -62,10 +63,9 @@
   (with-connection ()
     (clear-strage)
     (collect-ignore (make-instance 'foo :a (scan-range :length 10)))
-    (assert (= 4 (collect-length (scan* 'foo :where '(in a 2 3 7 9)))))
+    (is (= 4 (collect-length (scan* 'foo :where '(in a 2 3 7 9)))))
     (iterate ((x (scan* 'foo :where '(in a 2 3 7 9))))
-      (assert (member (a x) '(2 3 7 9))))))
-
+      (is (member (a x) '(2 3 7 9))))))
 
 
 (info.read-eval-print.nando.test)

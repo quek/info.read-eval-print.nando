@@ -27,8 +27,29 @@ inherit from this class."))
     (let ((object-id (save-object object))
           (class (class-of object)))
       (when (class-index class)
-        (add-class-index class object-id)))
+        (add-class-index class object-id))
+      (dolist (slot (c2mop:class-slots class))
+        (let ((slot-name (c2mop:slot-definition-name slot)))
+          (when (and (slot-boundp object slot-name)
+                     (slot-persistence slot)
+                     (slot-index slot))
+            (update-slot-index class object slot
+                               nil (slot-value object slot-name)
+                               nil t)))))
     result))
+
+(defmethod update-slot-index (class object slot
+                              old-value new-value
+                              old-boundp new-boundp)
+  "SLOT is a slot-definition, not a slot name."
+  (let ((object-id (object-id object))
+        (class-name (class-name class))
+        (slot-name (c2mop:slot-definition-name slot)))
+    (when old-boundp
+      (delete-slot-index object-id class-name slot-name))
+    (when new-boundp
+      (add-slot-index object-id class-name slot-name new-value))))
+
 
 
 (defconstant +class+ '+class+)

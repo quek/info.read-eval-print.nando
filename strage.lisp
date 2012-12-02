@@ -32,6 +32,19 @@
 (defun save-slot-value (object-id slot value)
   (redis:red-hset (key object-id) slot value ))
 
+(defun slot-index-key (class-name slot-name)
+  (with-standard-io-syntax
+    (key (concatenate 'string (princ-to-string class-name) ":" (princ-to-string slot-name)))))
+
+(defun add-slot-index (object-id class-name slot-name slot-value)
+  (redis:red-zadd (slot-index-key class-name slot-name) slot-value object-id))
+
+(defun delete-slot-index (object-id class-name slot-name)
+  (redis:red-zrem (slot-index-key class-name slot-name) object-id))
+
+(defun find-slot-index (class-name slot-name min &optional (max min))
+  (redis:red-zrangebyscore (slot-index-key class-name slot-name) min max))
+
 
 #|
 (redis:connect)
