@@ -26,7 +26,8 @@
 
 (defclass foo ()
   ((a :initarg :a :accessor a :index t)
-   (b :initarg :b :accessor b))
+   (b :initarg :b :accessor b)
+   (c :initarg :c :accessor c :initform 0))
   (:index t)
   (:metaclass persistent-class))
 
@@ -50,8 +51,6 @@
       (make-instance 'foo)
       (is (= 2 (collect-length (scan* 'foo)))))))
 
-
-
 (deftest test-where-= ()
   (with-connection ()
     (clear-strage)
@@ -63,8 +62,8 @@
   (with-connection ()
     (clear-strage)
     (collect-ignore (make-instance 'foo :a (scan-range :length 10)))
-    (is (= 4 (collect-length (scan* 'foo :where '(in a 2 3 7 9)))))
-    (iterate ((x (scan* 'foo :where '(in a 2 3 7 9))))
+    (is (= 4 (collect-length (scan* 'foo :where '(:in a 2 3 7 9)))))
+    (iterate ((x (scan* 'foo :where '(:in a 2 3 7 9))))
       (is (member (a x) '(2 3 7 9))))))
 
 

@@ -8,7 +8,7 @@
   (let ((object-ids
           (if where
               (where-to-function (class-name class)
-                                 (intern (princ-to-string (car where)) :keyword)
+                                 (car where)
                                  (cdr where))
               (load-class-index class))))
     (lambda ()
@@ -20,7 +20,7 @@
 
 (defgeneric where-to-function (class-name op args))
 
-(defmethod where-to-function (class-name (op (eql :=)) args)
+(defmethod where-to-function (class-name (op (eql '=)) args)
   (destructuring-bind (slot-name value) args
     (find-slot-index class-name slot-name value)))
 
