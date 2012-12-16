@@ -9,7 +9,7 @@
 ;; Conventions:
 ;;  Persistent equivalents of CL functions always have a "p-" prefix.
 
-(defgeneric object-id (object)
+(defgeneric _id (object)
   (:documentation "Returns the object id of a persistent-object or
 persistent-data."))
 
@@ -52,7 +52,7 @@ p-position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defclass proxy ()
-  ((object-id :initarg :object-id :reader object-id))
+  ((_id :initarg :_id :reader _id))
   (:documentation "Proxies are some kind of in-memory forwarding pointer
 to data in the cache.  They are never saved on disk."))
 
@@ -61,7 +61,7 @@ to data in the cache.  They are never saved on disk."))
 (defmethod maybe-dereference-proxy ((proxy proxy))
   (if *dont-dereference-proxies*
       proxy
-      (load-object (object-id proxy))))
+      (load-object (_id proxy))))
 
 (defmethod maybe-dereference-proxy (object)
   ;; Default: just return the object.
@@ -73,7 +73,7 @@ to data in the cache.  They are never saved on disk."))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defclass persistent-data ()
-  ((object-id :initarg :object-id :reader object-id)
+  ((_id :initarg :_id :reader _id)
    (contents :initarg :contents :accessor contents))
   (:documentation
  "PERSISTENT-DATA classes do not have PERSISTENT-CLASS as metaclass
@@ -83,7 +83,7 @@ functions like P-CAR instead."))
 
 (defmethod print-object ((object persistent-data) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (format stream "#~D" (slot-value object 'object-id))))
+    (format stream "#~D" (slot-value object '_id))))
 
 (defmethod compute-persistent-slot-names ((class standard-class)
                                           (object persistent-data))
@@ -93,7 +93,7 @@ functions like P-CAR instead."))
 
 
 (defmethod p-eql ((a persistent-data) (b persistent-data))
-  (= (object-id a) (object-id b)))
+  (= (_id a) (_id b)))
 
 (defmethod persistent-data-read (function (data persistent-data) &rest args)
   (let ((value (apply function (contents data) args)))
@@ -110,8 +110,8 @@ functions like P-CAR instead."))
 (defun make-persistent-data (class contents
                              &optional (rucksack (current-rucksack)))
   (let ((object (make-instance class :contents contents)))
-    (let ((object-id (cache-create-object object)))
-      (setf (slot-value object 'object-id) object-id))
+    (let ((_id (cache-create-object object)))
+      (setf (slot-value object '_id) _id))
     object))
 
 
@@ -477,14 +477,14 @@ modified persistent list. ITEM is evaluated before place."
   ;; When the serializer meets a persistent-data object, it only needs to save
   ;; the object id.  The cache will make sure that the cached object is saved
   ;; elsewhere.
-  (serialize (list +p-object+ (object-id object))))
+  (serialize (list +p-object+ (_id object))))
 
 (defmethod serialize ((object proxy))
   ;; Proxies are serialized like the cached objects they stand for.
-  (serialize (list +p-object+ (object-id object))))
+  (serialize (list +p-object+ (_id object))))
 
 (defmethod deserialize-object ((tag (eql +p-object+)) data)
   ;; Return a proxy.  The proxy contents will be automatically loaded
   ;; when necessary.
   (let ((id (cadr data)))
-    (make-instance 'proxy :object-id id)))
+    (make-instance 'proxy :_id id)))

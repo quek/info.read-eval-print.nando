@@ -1,109 +1,68 @@
 (in-package :info.read-eval-print.nando)
 
-(defparameter *key-prefix* "cl;")
 
-(defun clear-strage ()
-  (iterate ((key (scan (redis:red-keys (key "*")))))
-    (redis:red-del key)))
+(defparameter *db* "cl")
+(defparameter *db-host* cl-mongo:*mongo-default-host*)
+(defparameter *db-port* cl-mongo:*mongo-default-port*)
+
+(defun symbol-to-key (symbol)
+  (substitute #\space #\. (serialize symbol)))
+
+(defmacro with-connection ((&key (db *db*)
+                              (host *db-host*)
+                              (port *db-port*))
+                           &body body)
+  `(cl-mongo:with-mongo-connection (:db ,db :host ,host :port ,port)
+     ,@body))
 
 (defun key (&rest args)
-  (with-standard-io-syntax
-    (format nil "~a~{~a~^;~}" *key-prefix* (mapcar (lambda (x)
-                                                     (typecase x
-                                                       (string x)
-                                                       (t (prin1-to-string x))))
-                                                   args))))
+  (format nil "~{~a~^:~}" args))
 
-(defun new-object-id ()
-  (red:incr (key ";*object-id*")))
+(defun clear-strage (&optional (*db* *db*))
+  (cl-mongo:rm "object" :all))
 
-(defun save-object-data (object-id &rest fields)
-  (apply #'red:hmset (key object-id)
-         fields))
+(defun save-object-data (&rest fields)
+  (let ((doc (cl-mongo:make-document)))
+    (iterate (((k v) (scan-plist fields)))
+      (cl-mongo:add-element k v doc))
+    (cl-mongo:db.insert (key "object") doc)
+    (cl-mongo::_id doc)))
 
-(defun load-object-data (object-id)
-  (let ((key (key object-id)))
-    (redis:red-hgetall key)))
+(defun find-doc-by-id (_id &key (error t))
+  (let ((docs (cl-mongo:docs (cl-mongo:db.find (key "object") (cl-mongo:kv "_id" _id)))))
+    (cond (docs
+           (car docs))
+          (error
+           (error "Not found. _id: ~a" _id))
+          (t nil))))
 
-(defun add-class-index (class object-id)
-  (redis:red-sadd (key (class-name class)) object-id ))
+(defun find-object (kv)
+  (cl-mongo:docs (cl-mongo:db.find (key "object")
+                                   kv
+                                   :limit 0)))
 
-(defun load-class-index (class)
-  (redis:red-smembers (key (class-name class))))
-
-(defun save-slot-value (object-id slot value)
-  (redis:red-hset (key object-id) slot value ))
-
-(defmethod add-slot-index (object-id class-name slot-name index-type slot-value)
-  (redis:red-zadd (key class-name slot-name) slot-value object-id))
-
-(defmethod add-slot-index (object-id class-name slot-name (index-type (eql 'string)) slot-value)
-  (redis:red-sadd (key class-name slot-name slot-value) object-id))
-
-(defmethod delete-slot-index (object-id class-name index-type slot-name slot-value)
-  (redis:red-zrem (key class-name slot-name) object-id))
-
-(defmethod delete-slot-index (object-id class-name (index-type (eql 'string)) slot-name slot-value)
-  (redis:red-zrem (key class-name slot-name slot-value) object-id))
-
-(defmethod find-slot-index (class-name slot-name index-type min &optional (max min))
-  (redis:red-zrangebyscore (key class-name slot-name) min max))
-
-(defmethod find-slot-index (class-name slot-name (index-type (eql 'string)) min &optional max)
-  (declare (ignore max))
-  (redis:red-smembers (key class-name slot-name min)))
-
+(defun save-slot-value (_id slot value)
+  (let ((doc (find-doc-by-id _id)))
+    (cl-mongo:add-element slot value doc)
+    (cl-mongo:db.save (key "object") doc)))
 
 #|
-(redis:connect)
-;;⇒ #<REDIS:REDIS-CONNECTION {100D676B53}>
-
-(redis:red-del 1)
-(redis:red-sadd 1 1)
-;;⇒ T
-(redis:red-exists 1)
-;;⇒ T
-(redis:red-srem 1 1)
-;;⇒ T
-(redis:red-exists 1)
-;;⇒ NIL
-
 
 (defclass foo ()
-  ())
-(redis:red-set 1 1)
-;;⇒ "OK"
-(redis:red-get 1)
-;;⇒ "1"
+  ((a :initarg :a :initform 123))
+  (:index t)
+  (:metaclass persistent-class))
 
-;;⇒ "1"
-(redis:red-set "1" "a")
-;;⇒ "OK"
-(redis:red-get "1")
-;;⇒ "a"
+(with-connection ()
+  (clear-strage))
 
-;;⇒ "1"
-(symbol-name '|a b|)
-;;⇒ "a b"
-(find-symbol "a b")
-;;⇒ |a b|
-;;   :INTERNAL
+(with-connection ()
+  (let ((id (_id (make-instance 'foo))))
+    (find-doc-by-id id)))
 
-(redis:red-hmset "foox" "s1" "a" "s2" "b")
-;;⇒ "OK"
-(redis:red-hkeys "foox")
-;;⇒ ("s1" "s2")
-(redis:red-hmget "foox" "s1" "s2")
-;;⇒ ("a" "b")
-
-(with-standard-io-syntax
-  (princ "hello"))
-;;→ hello
-;;⇒ "hello"
-(format nil "~s" "hollo")
-;;⇒ "\"hollo\""
-(with-output-to-string (*standard-output*) (prin1 "hello"))
-;;⇒ "\"hello\""
-(with-output-to-string (*standard-output*) (prin1 1))
-;;⇒ "1"
+(with-connection ()
+  (cl-mongo:docs (cl-mongo:db.find (key "object")
+                                   (cl-mongo:kv (cl-mongo:kv "INFO READ-EVAL-PRINT NANDO::+CLASS+"
+                                                             "INFO.READ-EVAL-PRINT.NANDO.TEST::FOO")
+                                                (cl-mongo:kv "INFO READ-EVAL-PRINT NANDO TEST::A" 7)))))
 |#

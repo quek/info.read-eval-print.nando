@@ -5,34 +5,25 @@
                                                      offset
                                                      limit
                                                      order)
-  (let ((object-ids
-          (if where
-              (where-to-function (class-name class)
-                                 (car where)
-                                 (cdr where))
-              (load-class-index class))))
+  (let ((docs (find-object (apply #'cl-mongo:kv
+                                  (cl-mongo:kv (symbol-to-key +class+) (serialize (class-name class)))
+                                  (let ((kv (compute-where (car where) (cdr where))))
+                                    (if kv
+                                        (list kv)
+                                        nil))))))
     (lambda ()
-      (let ((object-id (pop object-ids)))
-        (if object-id
-            (values (load-object object-id) t)
+      (let ((doc (pop docs)))
+        (if doc
+            (values (load-object doc) t)
             (values nil nil))))))
 
+(defgeneric compute-where (op args))
 
-(defgeneric where-to-function (class-name op args))
+(defmethod compute-where ((op null) args)
+  nil)
 
-(defmethod where-to-function (class-name (op (eql '=)) args)
+(defmethod compute-where ((op (eql '=)) args)
   (destructuring-bind (slot-name value) args
-    (let ((slot (collect-first
-                 (choose-if (lambda (x)
-                              (eq slot-name (c2mop:slot-definition-name x)))
-                            (scan (c2mop:class-slots (find-class class-name)))))))
-      (find-slot-index class-name slot-name (slot-index slot)  value))))
+    (cl-mongo:kv (symbol-to-key slot-name) (serialize value))))
 
-(defmethod where-to-function (class-name (op (eql :in)) args)
-  (destructuring-bind (slot-name &rest values) args
-    (let ((slot-index (slot-index
-                       (collect-first
-                        (choose-if (lambda (x)
-                                     (eq slot-name (c2mop:slot-definition-name x)))
-                                   (scan (c2mop:class-slots (find-class class-name))))))))
-      (collect-append (find-slot-index class-name slot-name slot-index (scan values))))))
+

@@ -17,7 +17,6 @@
   :depends-on (:bordeaux-threads
                :anaphora
                :closer-mop
-               :cl-redis
-               :hu.dwim.defclass-star
+               :cl-mongo
                :info.read-eval-print.series-ext))
 

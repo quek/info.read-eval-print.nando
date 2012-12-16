@@ -5,8 +5,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defclass persistent-object ()
-  ((object-id :initarg :object-id :reader object-id
-              :persistence nil :index nil))
+  ((_id :initarg :_id :reader _id
+        :persistence nil :index nil))
   (:metaclass persistent-class)
   (:index nil)
   (:documentation "Classes of metaclass PERSISTENT-CLASS automatically
@@ -24,32 +24,22 @@ inherit from this class."))
                                         &key)
   (let* ((*initializing-instance* t)
          (result (call-next-method)))
-    (let ((object-id (save-object object))
-          (class (class-of object)))
-      (when (class-index class)
-        (add-class-index class object-id))
-      (dolist (slot (c2mop:class-slots class))
-        (let ((slot-name (c2mop:slot-definition-name slot)))
-          (when (and (slot-boundp object slot-name)
-                     (slot-persistence slot)
-                     (slot-index slot))
-            (update-slot-index class object slot
-                               nil (slot-value object slot-name)
-                               nil t)))))
+    (when (class-index (class-of object))
+      (create-object object))
     result))
 
 (defmethod update-slot-index (class object slot
                               old-value new-value
                               old-boundp new-boundp)
   "SLOT is a slot-definition, not a slot name."
-  (let ((object-id (object-id object))
+  (let ((_id (_id object))
         (class-name (class-name class))
         (slot-name (c2mop:slot-definition-name slot))
         (index-type (slot-index slot)))
     (when old-boundp
-      (delete-slot-index object-id class-name slot-name index-type old-value))
+      (delete-slot-index _id class-name slot-name index-type old-value))
     (when new-boundp
-      (add-slot-index object-id class-name slot-name index-type new-value))))
+      (add-slot-index _id class-name slot-name index-type new-value))))
 
 
 
@@ -57,34 +47,41 @@ inherit from this class."))
 (defconstant +unbound+ '+unbound+)
 
 (defun save-object (object)
-  (let ((object-id (new-object-id)))
-    (apply #'save-object-data
-           object-id
-           +class+ (serialize (class-name (class-of object)))
-           (loop for slot-name in (saved-slots object)
-                 append (list (serialize slot-name)
-                              (if (slot-boundp object slot-name)
-                                  (serialize (slot-value object slot-name))
-                                  #.(serialize +unbound+)))))
-    (setf (slot-value object 'object-id) object-id)))
+  (if (slot-boundp object '_id)
+      (update-object object)
+      (create-object object)))
+
+(defun create-object (object)
+  (setf (slot-value object '_id)
+        (apply #'save-object-data
+               (substitute #\space #\. (serialize +class+))
+               (serialize (class-name (class-of object)))
+               (loop for slot in (c2mop:class-slots (class-of object))
+                     for slot-name = (c2mop:slot-definition-name slot)
+                     if (slot-persistence slot)
+                       append (list (substitute #\space #\. (serialize slot-name))
+                                    (if (slot-boundp object slot-name)
+                                        (serialize (slot-value object slot-name))
+                                        #.(serialize +unbound+)))))))
+
 
 
 (defmethod print-object ((object persistent-object) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (format stream "#~D" (slot-value object 'object-id))))
+    (format stream "~a" (slot-value object '_id))))
 
 
 ;; It's a bit stupid that we have to write the same code for three
 ;; P-EQL methods, but we don't seem to have much choice.
 
 (defmethod p-eql ((a persistent-object) (b persistent-object))
-  (= (object-id a) (object-id b)))
+  (= (_id a) (_id b)))
 
 (defmethod p-eql ((a persistent-data) (b persistent-object))
-  (= (object-id a) (object-id b)))
+  (= (_id a) (_id b)))
 
 (defmethod p-eql ((a persistent-object) (b persistent-data))
-  (= (object-id a) (object-id b)))
+  (= (_id a) (_id b)))
 
 
 
@@ -110,7 +107,9 @@ inherit from this class."))
                                (c2mop:slot-value-using-class class object slot-name-or-def)))
                (result (call-next-method)))
           (unless *initializing-instance*
-            (save-slot-value (object-id object) (serialize slot-name) (serialize new-value)))
+            (save-slot-value (_id object)
+                             (substitute #\space #\. (serialize slot-name))
+                             (serialize new-value)))
           ;; Update indexes.
           #+あとでね。
           (unless *initializing-instance*
@@ -161,24 +160,32 @@ inherit from this class."))
 (defmethod serialize ((object persistent-object))
   ;; When the serializer meets a persistent object, it only needs to save the
   ;; object id.  The cache will make sure that the object is saved elsewhere.
-  (serialize (list +p-object+ (object-id object))))
+  (serialize (list +p-object+ (_id object))))
 
 ;;
 ;; Loading objects
 ;;
-(defmethod load-object (object-id)
-  (destructuring-bind (_class_ class . slots)  (load-object-data object-id)
-    (declare (ignore _class_))
-    (let* ((*initializing-instance* t)
-           (class (find-class (deserialize class)))
-           (object (allocate-instance class)))
-      (setf (slot-value object 'object-id) object-id)
-      (iterate (((k v) (scan-plist slots)))
-        (let ((slot (deserialize k))
-              (value (deserialize v)))
-          (unless (eq value +unbound+)
-            (setf (slot-value object slot) value))))
-      object)))
+(defmethod load-object (id)
+  (load-object (find-doc-by-id id)))
+
+(defmethod load-object ((doc cl-mongo:document))
+  (let* ((class (find-class (deserialize (cl-mongo:get-element
+                                          (substitute #\space #\. (serialize +class+))
+                                          doc))))
+         (object (allocate-instance class))
+         (*initializing-instance* t))
+    (setf (slot-value object '_id) (cl-mongo:doc-id doc))
+    (iterate ((slot (scan (c2mop:class-slots class))))
+      (let ((slot-name (c2mop:slot-definition-name slot)))
+        (multiple-value-bind (value ok)
+            (cl-mongo:get-element (substitute #\space #\. (serialize slot-name))
+                                  doc)
+          (when ok
+            (let ((value (deserialize value)))
+              (when (and (not (eq value +class+))
+                         (not (eq value +unbound+)))
+                (setf (slot-value object slot-name) value)))))))
+    object))
 
 
 
