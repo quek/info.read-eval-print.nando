@@ -37,21 +37,72 @@
           (t nil))))
 
 (defun find-object (kv)
-  (cl-mongo:docs (cl-mongo:db.find (key "object")
-                                   kv
-                                   :limit 0)))
+  (cl-mongo:docs
+   (cl-mongo:iter
+    (cl-mongo:db.find (key "object") kv :limit 0))))
 
 (defun save-slot-value (_id slot value)
   (let ((doc (find-doc-by-id _id)))
     (cl-mongo:add-element slot value doc)
     (cl-mongo:db.save (key "object") doc)))
 
+
+(defstruct find-query
+  collection
+  query
+  (limit 0))
+
+(defmethod info.read-eval-print.series-ext::scan% ((find-query find-query) &key)
+  (let* ((limit (find-query-limit find-query))
+         (count 0)
+         (result (cl-mongo:db.find (find-query-collection find-query)
+                                   (find-query-query find-query)
+                                   :limit limit)))
+    (lambda ()
+      (labels ((f ()
+                 (let ((doc (pop (cadr result))))
+                   (cond (doc
+                          (values (load-object doc) t))
+                         ((progn
+                            (push nil (cadr result))
+                            (zerop (cl-mongo::db.iterator result)))
+                          (end))
+                         (t
+                          (if (zerop limit)
+                              (progn
+                                (setf result (cl-mongo:db.iter result :limit 0))
+                                (pop (cadr result))
+                                (f))
+                              (progn
+                                (incf count (nth 7 (car result)))
+                                (if (<= limit count)
+                                    (end)
+                                    (progn
+                                      (setf result (cl-mongo:db.iter result :limit (- limit count)))
+                                      (pop (cadr result))
+                                      (f)))))))))
+               (end ()
+                 (cl-mongo:db.stop result)
+                 (values nil nil)))
+        (f)))))
+
+
+
 #|
 
 (defclass foo ()
-  ((a :initarg :a :initform 123))
+  ((a :initarg :a :initform 123)
+   (b :initform "あいうあいうあいうあいうあいうあいうあいうあいうあいうあいうあいうあいう"))
   (:index t)
   (:metaclass persistent-class))
+
+(with-connection ()
+  ;;(clear-strage)
+  ;;(dotimes (i 80001) (make-instance 'foo))
+  (collect-length (scan* (make-find-query :collection (key "object") :query :all :limit 777777))))
+
+
+
 
 (with-connection ()
   (clear-strage))
@@ -65,4 +116,10 @@
                                    (cl-mongo:kv (cl-mongo:kv "INFO READ-EVAL-PRINT NANDO::+CLASS+"
                                                              "INFO.READ-EVAL-PRINT.NANDO.TEST::FOO")
                                                 (cl-mongo:kv "INFO READ-EVAL-PRINT NANDO TEST::A" 7)))))
+
+(with-connection ()
+  (multiple-value-bind (iterator collection docs)
+      (cl-mongo::db.iterator (cl-mongo:db.find (key "object")
+                                               :all))
+    (values iterator collection (length docs))))
 |#

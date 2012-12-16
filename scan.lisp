@@ -3,22 +3,20 @@
 (defmethod info.read-eval-print.series-ext::scan% ((class persistent-class)
                                                    &key where
                                                      offset
-                                                     limit
+                                                     (limit 0)
                                                      order)
-  (let ((docs (find-object (apply #'cl-mongo:kv
+  (info.read-eval-print.series-ext::scan%
+   (make-find-query :collection (key "object")
+                    :query (apply #'cl-mongo:kv
                                   (cl-mongo:kv (symbol-to-key +class+) (serialize (class-name class)))
                                   (let ((kv (compute-where
                                              (aand (car where)
-                                                  ( intern (symbol-name it) :keyword))
+                                                   ( intern (symbol-name it) :keyword))
                                              (cdr where))))
                                     (if kv
                                         (list kv)
-                                        nil))))))
-    (lambda ()
-      (let ((doc (pop docs)))
-        (if doc
-            (values (load-object doc) t)
-            (values nil nil))))))
+                                        nil)))
+                    :limit limit)))
 
 (defgeneric compute-where (op args))
 
