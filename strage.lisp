@@ -50,14 +50,26 @@
 (defstruct find-query
   collection
   query
-  (limit 0))
+  (skip 0)
+  (limit 0)
+  order
+  asc)
 
 (defmethod info.read-eval-print.series-ext::scan% ((find-query find-query) &key)
   (let* ((limit (find-query-limit find-query))
          (count 0)
-         (result (cl-mongo:db.find (find-query-collection find-query)
-                                   (find-query-query find-query)
-                                   :limit limit)))
+         (order (find-query-order find-query))
+         (result (if order
+                     (cl-mongo:db.sort (find-query-collection find-query)
+                                       (find-query-query find-query)
+                                       :skip (find-query-skip find-query)
+                                       :limit limit
+                                       :field order
+                                       :asc (find-query-asc find-query))
+                     (cl-mongo:db.find (find-query-collection find-query)
+                                       (find-query-query find-query)
+                                       :skip (find-query-skip find-query)
+                                       :limit limit))))
     (lambda ()
       (labels ((f ()
                  (let ((doc (pop (cadr result))))

@@ -2,9 +2,10 @@
 
 (defmethod info.read-eval-print.series-ext::scan% ((class persistent-class)
                                                    &key where
-                                                     offset
+                                                     (offset 0)
                                                      (limit 0)
-                                                     order)
+                                                     order
+                                                     (asc t))
   (info.read-eval-print.series-ext::scan%
    (make-find-query :collection (key "object")
                     :query (apply #'cl-mongo:kv
@@ -16,7 +17,10 @@
                                     (if kv
                                         (list kv)
                                         nil)))
-                    :limit limit)))
+                    :skip offset
+                    :limit limit
+                    :order (and order (symbol-to-key order))
+                    :asc asc)))
 
 (defgeneric compute-where (op args))
 

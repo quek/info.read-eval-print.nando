@@ -88,5 +88,14 @@
     (let ((foo (load-object (_id (make-instance 'foo :a (make-instance 'foo :a :inner))))))
       (is (eq :inner (a (a foo)))))))
 
+(deftest test-offset-limit ()
+  (with-connection ()
+    (clear-strage)
+    (collect-ignore (make-instance 'foo :a (scan-range :from 6 :upto 10)))
+    (collect-ignore (make-instance 'foo :a (scan-range :from 1 :upto 5)))
+    (is (= 3 (collect-length (scan* 'foo :offset 4 :limit 3 :order 'a))))
+    (iterate ((foo (scan* 'foo :offset 1 :limit 3 :order 'a))
+              (a (scan-range :from 2 :length 3)))
+      (is (= a (a foo))))))
 
 (info.read-eval-print.nando.test)
