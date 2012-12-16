@@ -34,6 +34,9 @@ stream in a serializer."))
 (defmethod serialize ((x integer))
   x)
 
+(defmethod serialize ((x float))
+  x)
+
 (defmethod serialize ((oid cl-mongo::bson-oid))
   oid)
 
@@ -46,6 +49,9 @@ stream in a serializer."))
           x))))
 
 (defmethod deserialize ((x integer))
+  x)
+
+(defmethod deserialize ((x float))
   x)
 
 (defgeneric deserialize-object (tag data))

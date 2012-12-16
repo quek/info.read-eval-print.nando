@@ -47,29 +47,40 @@
     (cl-mongo:db.save (key "object") doc)))
 
 
-(defstruct find-query
-  collection
-  query
-  (skip 0)
-  (limit 0)
-  order
-  asc)
+(defclass query ()
+  ((collection :initarg :collection :reader collection-of)
+   (query :initarg :query :reader query-of)
+   (skip :initarg :skip :initform 0 :reader skip-of)
+   (limit :initarg :limit :initform 0 :reader limit-of)
+   (order :initarg :order)))
 
-(defmethod info.read-eval-print.series-ext::scan% ((find-query find-query) &key)
-  (let* ((limit (find-query-limit find-query))
+(defmethod order-of ((query query))
+  (let ((order (slot-value query 'order)))
+    (cond ((null order)
+           nil)
+          ((atom order)
+           (cl-mongo:kv (symbol-to-key order) 1))
+          (t
+           (apply #'cl-mongo:kv
+                  (mapcar (lambda (x)
+                            (if (atom x)
+                                (cl-mongo:kv (symbol-to-key x) 1)
+                                (cl-mongo:kv (symbol-to-key (car x))
+                                             (if (eq :desc (cadr x)) -1 1))))
+                          order))))))
+
+(defmethod info.read-eval-print.series-ext::scan% ((query query) &key)
+  (let* ((limit (limit-of query))
          (count 0)
-         (order (find-query-order find-query))
-         (result (if order
-                     (cl-mongo:db.sort (find-query-collection find-query)
-                                       (find-query-query find-query)
-                                       :skip (find-query-skip find-query)
-                                       :limit limit
-                                       :field order
-                                       :asc (find-query-asc find-query))
-                     (cl-mongo:db.find (find-query-collection find-query)
-                                       (find-query-query find-query)
-                                       :skip (find-query-skip find-query)
-                                       :limit limit))))
+         (order (order-of query))
+         (result (cl-mongo:db.find
+                  (collection-of query)
+                  (if order
+                      (cl-mongo:kv (cl-mongo:kv "query" (query-of query))
+                                   (cl-mongo:kv "orderby" order))
+                      (query-of query))
+                  :skip (skip-of query)
+                  :limit limit)))
     (lambda ()
       (labels ((f ()
                  (let ((doc (pop (cadr result))))
@@ -111,7 +122,7 @@
 (with-connection ()
   ;;(clear-strage)
   ;;(dotimes (i 80001) (make-instance 'foo))
-  (collect-length (scan* (make-find-query :collection (key "object") :query :all :limit 777777))))
+  (collect-length (scan* (make-instance 'query :collection (key "object") :query :all :limit 777777))))
 
 
 

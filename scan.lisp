@@ -4,23 +4,22 @@
                                                    &key where
                                                      (offset 0)
                                                      (limit 0)
-                                                     order
-                                                     (asc t))
+                                                     order)
   (info.read-eval-print.series-ext::scan%
-   (make-find-query :collection (key "object")
-                    :query (apply #'cl-mongo:kv
-                                  (cl-mongo:kv (symbol-to-key +class+) (serialize (class-name class)))
-                                  (let ((kv (compute-where
-                                             (aand (car where)
-                                                   ( intern (symbol-name it) :keyword))
-                                             (cdr where))))
-                                    (if kv
-                                        (list kv)
-                                        nil)))
-                    :skip offset
-                    :limit limit
-                    :order (and order (symbol-to-key order))
-                    :asc asc)))
+   (make-instance 'query
+                  :collection (key "object")
+                  :query (apply #'cl-mongo:kv
+                                (cl-mongo:kv (symbol-to-key +class+) (serialize (class-name class)))
+                                (let ((kv (compute-where
+                                           (aand (car where)
+                                                 ( intern (symbol-name it) :keyword))
+                                           (cdr where))))
+                                  (if kv
+                                      (list kv)
+                                      nil)))
+                  :skip offset
+                  :limit limit
+                  :order order)))
 
 (defgeneric compute-where (op args))
 

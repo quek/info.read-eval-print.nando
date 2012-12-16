@@ -24,10 +24,9 @@
 ;;⇒ NIL
 
 
-;;(collect (scan* 'foo :where `(= a 1)))
-;;(collect (scan* 'foo :where `(in a 1 10)))
-;;(collect (scan* 'foo :where `(< a 10)))
-;;(collect (scan* 'foo :where `(> a 10)))
-;;(collect (scan* 'foo :where `(=~ a ".*hello.*")))
-
-
+(collect (with-finding foo
+           (limit 3)
+           (offset 2)
+           (order 'a)
+           (order 'b :desc)
+           (where (> 'a 1))))

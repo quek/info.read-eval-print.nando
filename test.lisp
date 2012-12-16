@@ -98,4 +98,17 @@
               (a (scan-range :from 2 :length 3)))
       (is (= a (a foo))))))
 
+(deftest test-complex-order ()
+  (with-connection ()
+    (clear-strage)
+    (let ((bs (collect (scan-range :from 1 :upto 10))))
+      (collect-ignore (make-instance 'foo :a 10.1 :b (scan bs)))
+      (collect-ignore (make-instance 'foo :a 9.99 :b (scan bs)))
+      (iterate ((foo (scan* 'foo :order '(a (b :desc))))
+                (a (catenate (subseries (series 9.99) 0 10) (subseries (series 10.1) 0 10)))
+                (b (scan '(10 9 8 7 6 5 4 3 2 1 10 9 8 7 6 5 4 3 2 1))))
+        (is (= a (a foo)))
+        (is (= b (b foo)))))))
+
+
 (info.read-eval-print.nando.test)
