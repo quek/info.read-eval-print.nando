@@ -160,7 +160,7 @@ inherit from this class."))
 (defmethod serialize ((object persistent-object))
   ;; When the serializer meets a persistent object, it only needs to save the
   ;; object id.  The cache will make sure that the object is saved elsewhere.
-  (serialize (list +p-object+ (_id object))))
+  (_id object))
 
 ;;
 ;; Loading objects

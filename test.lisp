@@ -82,4 +82,11 @@
     (iterate ((x (scan* 'foo :where '(> a 8))))
       (is (= (a x) 9)))))
 
+(deftest test-proxy ()
+  (with-connection ()
+    (clear-strage)
+    (let ((foo (load-object (_id (make-instance 'foo :a (make-instance 'foo :a :inner))))))
+      (is (eq :inner (a (a foo)))))))
+
+
 (info.read-eval-print.nando.test)

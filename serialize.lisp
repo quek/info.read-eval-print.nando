@@ -31,6 +31,9 @@ stream in a serializer."))
     (with-standard-io-syntax
       (format out "(~{~a~^ ~})" (mapcar #'serialize list)))))
 
+(defmethod serialize ((oid cl-mongo::bson-oid))
+  oid)
+
 (defmethod deserialize (serialized)
   "Reads the next object from the serialized string."
   (with-standard-io-syntax
@@ -38,9 +41,6 @@ stream in a serializer."))
       (if (consp x)
           (deserialize-object (car x) x)
           x))))
-
-(defmethod deserialize ((oid cl-mongo::bson-oid))
-  oid)
 
 (defgeneric deserialize-object (tag data))
 

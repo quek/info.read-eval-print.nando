@@ -470,21 +470,15 @@ modified persistent list. ITEM is evaluated before place."
 ;;; Serializing/deserializing cached data
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defconstant +p-object+ '+p-object+
-  "The serialization marker for cached objects.")
-
 (defmethod serialize ((object persistent-data))
   ;; When the serializer meets a persistent-data object, it only needs to save
   ;; the object id.  The cache will make sure that the cached object is saved
   ;; elsewhere.
-  (serialize (list +p-object+ (_id object))))
+  (_id object))
 
 (defmethod serialize ((object proxy))
   ;; Proxies are serialized like the cached objects they stand for.
-  (serialize (list +p-object+ (_id object))))
+  (_id object))
 
-(defmethod deserialize-object ((tag (eql +p-object+)) data)
-  ;; Return a proxy.  The proxy contents will be automatically loaded
-  ;; when necessary.
-  (let ((id (cadr data)))
-    (make-instance 'proxy :_id id)))
+(defmethod deserialize ((oid cl-mongo::bson-oid))
+  (make-instance 'proxy :_id oid))
