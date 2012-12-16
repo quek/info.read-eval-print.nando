@@ -48,7 +48,8 @@
       (setf (b foo) "まみむめも♪")
       (let ((loaded (load-object (_id foo))))
         (is (= 100 (a loaded)))
-        (is (string= "まみむめも♪" (b loaded)))))))
+        (is (string= "まみむめも♪" (b loaded)))))
+    (is (= 1 (collect-length (scan* 'foo))))))
 
 
 (deftest test-where-= ()
