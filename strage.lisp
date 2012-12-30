@@ -42,9 +42,9 @@
     (cl-mongo:db.find (key "object") kv :limit 0))))
 
 (defun save-slot-value (_id slot value)
-  (let ((doc (find-doc-by-id _id)))
-    (cl-mongo:add-element slot value doc)
-    (cl-mongo:db.save (key "object") doc)))
+  (cl-mongo:db.update (key "object")
+                      (cl-mongo:kv "_id" _id)
+                      (cl-mongo:$set slot value)))
 
 
 (defclass query ()
