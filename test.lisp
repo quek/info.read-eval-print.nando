@@ -82,6 +82,15 @@
     (iterate ((x (scan* 'foo :where '(> a 8))))
       (is (= (a x) 9)))))
 
+(deftest test-where-/= ()
+  (with-connection ()
+    (clear-strage)
+    (make-instance 'foo :a 10)
+    (make-instance 'foo :a 5)
+    (let ((foos (collect (scan* 'foo :where '(/= a 10)))))
+      (is (= 1 (length foos)))
+      (is (= 5 (a (car foos)))))))
+
 (deftest test-proxy ()
   (with-connection ()
     (clear-strage)
