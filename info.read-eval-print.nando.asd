@@ -17,6 +17,6 @@
   :depends-on (:bordeaux-threads
                :anaphora
                :closer-mop
-               :cl-mongo
+               :info.read-eval-print.mongo
                :info.read-eval-print.series-ext))
 

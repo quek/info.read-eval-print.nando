@@ -37,7 +37,7 @@ stream in a serializer."))
 (defmethod serialize ((x float))
   x)
 
-(defmethod serialize ((oid cl-mongo::bson-oid))
+(defmethod serialize ((oid b:object-id))
   oid)
 
 (defmethod deserialize (serialized)

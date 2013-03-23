@@ -168,18 +168,17 @@ inherit from this class."))
 (defmethod load-object (id)
   (load-object (find-doc-by-id id)))
 
-(defmethod load-object ((doc cl-mongo:document))
-  (let* ((class (find-class (deserialize (cl-mongo:get-element
-                                          (substitute #\space #\. (serialize +class+))
-                                          doc))))
+(defmethod load-object ((doc b:bson))
+  (let* ((class (find-class (deserialize (b:value
+                                          doc
+                                          (substitute #\space #\. (serialize +class+))))))
          (object (allocate-instance class))
          (*initializing-instance* t))
-    (setf (slot-value object '_id) (cl-mongo:doc-id doc))
+    (setf (slot-value object '_id) (b:value doc :_id))
     (iterate ((slot (scan (c2mop:class-slots class))))
       (let ((slot-name (c2mop:slot-definition-name slot)))
         (multiple-value-bind (value ok)
-            (cl-mongo:get-element (substitute #\space #\. (serialize slot-name))
-                                  doc)
+            (b:value doc (substitute #\space #\. (serialize slot-name)))
           (when ok
             (let ((value (deserialize value)))
               (when (and (not (eq value +class+))

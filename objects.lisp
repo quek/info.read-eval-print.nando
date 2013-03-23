@@ -480,5 +480,5 @@ modified persistent list. ITEM is evaluated before place."
   ;; Proxies are serialized like the cached objects they stand for.
   (_id object))
 
-(defmethod deserialize ((oid cl-mongo::bson-oid))
+(defmethod deserialize ((oid b:object-id))
   (make-instance 'proxy :_id oid))
