@@ -142,7 +142,7 @@
                  (with-connection ()
                    (with-transaction ()
                      (let ((foo (collect-first (scan* 'foo))))
-                       (signals info.read-eval-print.nando:concurrent-modify-error
+                       (signals concurrent-modify-error
                          (setf (b foo) 't2)))))))))
       (bt:join-thread t1)
       (bt:join-thread t2)
@@ -164,7 +164,7 @@
                  (sleep 0.1)
                  (with-connection ()
                    (with-transaction ()
-                     (signals info.read-eval-print.nando:concurrent-modify-error
+                     (signals concurrent-modify-error
                        (collect-first (scan* 'foo :for-update t)))))))))
       (bt:join-thread t1)
       (bt:join-thread t2))))
