@@ -8,6 +8,8 @@
 (defparameter *db-host* "localhost")
 (defparameter *db-port* 27017)
 
+(alexandria:define-constant +lock-key+ "__lock_key__" :test #'equal)
+
 (defun symbol-to-key (symbol)
   (substitute #\space #\. (serialize symbol)))
 
@@ -27,11 +29,28 @@
   (m:delete *object-collection* nil))
 
 (defun save-object-data (&rest fields)
-  (let ((doc (b:bson :_id (b:object-id))))
+  (let* ((object-id (b:object-id))
+         (doc (b:bson :_id object-id)))
     (iterate (((k v) (scan-plist fields)))
       (setf (b:value doc k) v))
     (m:insert *object-collection* doc)
-    (b:value doc :_id)))
+    object-id))
+
+(defun update-object-data (_id &rest fields)
+  (let ((query (b:bson :_id _id))
+        (update (b:bson (apply #'m:$set fields))))
+    (m:update *object-collection* query update)))
+
+(defun lock-object-data (_id)
+  (m:find-and-modify *object-collection*
+                     (b:bson :_id _id (m:$exists +lock-key+ nil))
+                     :update (b:bson (m:$set +lock-key+ t))))
+
+(defun unlock-object-data (_id)
+  (m:find-and-modify *object-collection*
+                     (b:bson :_id _id (m:$exists +lock-key+ t))
+                     :update (b:bson (m:$unset +lock-key+))))
+
 
 (defun find-doc-by-id (_id &key (error t))
   (let ((doc (m:find-one *object-collection* (b:bson :_id _id))))

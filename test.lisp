@@ -119,5 +119,16 @@
         (is (= a (a foo)))
         (is (= b (b foo)))))))
 
+(deftest test-transaction ()
+  (with-connection ()
+    (clear-strage)
+    (ignore-errors (with-transaction ()
+                     (make-instance 'foo)
+                     (error "for rollback")))
+    (is (= 0 (collect-length (scan* 'foo))))
+    (with-transaction ()
+      (make-instance 'foo))
+    (is (= 1 (collect-length (scan* 'foo))))))
+
 
 (info.read-eval-print.nando.test)

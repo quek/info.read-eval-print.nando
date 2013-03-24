@@ -8,7 +8,7 @@
                (:file "thread")
                (:file "serialize")
                (:file "strage")
-               (:file "root")
+               (:file "transaction")
                (:file "mop")
                (:file "objects")
                (:file "persistent-object")

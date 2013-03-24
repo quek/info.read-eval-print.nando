@@ -5,6 +5,7 @@
                    (:b :info.read-eval-print.bson))
  (:export #:*connection*
           #:with-connection
+          #:with-transaction
           #:clear-strage
 
           #:persistent-class
