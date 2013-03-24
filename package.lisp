@@ -11,4 +11,8 @@
           #:persistent-class
 
           #:_id
-          #:load-object))
+          #:load-object
+
+          #:nando-error
+          #:concurrent-modify-error
+          #:transaction-required-error))

@@ -35,6 +35,7 @@
       (mapc #'unlock-object xs))))
 
 (defmethod add-dirty-object ((transaction transaction) object)
-  (lock-object object)
+  (unless (lock-object object)
+    (error 'concurrent-modify-error))
   (with-slots (dirty-objects) transaction
     (pushnew object dirty-objects)))

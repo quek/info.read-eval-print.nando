@@ -4,7 +4,10 @@
                                                    &key where
                                                      (skip 0)
                                                      (limit 0)
-                                                     sort)
+                                                     sort
+                                                     for-update)
+  (when (and for-update (null *transaction*))
+    (error 'transaction-required-error))
   (let* ((query (let ((query (b:bson (symbol-to-key +class+) (serialize (class-name class)))))
                   (let ((kv (compute-where (aand (car where)
                                                  (intern (symbol-name it) :keyword))
@@ -17,16 +20,30 @@
                              x
                              (substitute #\space #\. (serialize x))))
                        (alexandria:ensure-list sort)))
-         (generator (generator (m:scan-mongo *object-collection*
-                                             query
-                                             :skip skip
-                                             :limit limit
-                                             :sort sort))))
+         (generator (generator
+                     (m:scan-mongo *object-collection*
+                                   query
+                                   :skip skip
+                                   :limit limit
+                                   :sort sort
+                                   :projection (if for-update
+                                                   '(:_id)
+                                                   nil)))))
     (lambda ()
       (let ((bson (next-in generator nil)))
         (if bson
-            (values (load-object bson) t)
+            (values (if for-update
+                        (%load-object-for-update (b:value bson :_id))
+                        (load-object bson))
+                    t)
             (values nil nil))))))
+
+(defun %load-object-for-update (id)
+  (unless (lock-object-data id)
+    (error 'concurrent-modify-error))
+  (let ((object (load-object (find-doc-by-id id))))
+    (add-dirty-object *transaction* object)
+    object))
 
 (defgeneric compute-where (op args))
 

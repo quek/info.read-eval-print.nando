@@ -5,6 +5,7 @@
   :components ((:file "package")
                (:file "type")
                (:file "util")
+               (:file "condition")
                (:file "thread")
                (:file "serialize")
                (:file "strage")

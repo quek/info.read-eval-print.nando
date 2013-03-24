@@ -5,7 +5,7 @@
 (info.read-eval-print.series-ext:sdefpackage
  :info.read-eval-print.nando.test
  (:use :cl :anaphora :info.read-eval-print.nando)
- (:import-from :hu.dwim.stefil #:is #:deftest))
+ (:import-from :hu.dwim.stefil #:is #:deftest #:signals))
 
 (in-package :info.read-eval-print.nando.test)
 
@@ -128,7 +128,46 @@
     (is (= 0 (collect-length (scan* 'foo))))
     (with-transaction ()
       (make-instance 'foo))
-    (is (= 1 (collect-length (scan* 'foo))))))
+    (is (= 1 (collect-length (scan* 'foo))))
+    (let ((t1 (bt:make-thread
+               (lambda ()
+                 (with-connection ()
+                   (with-transaction ()
+                     (let ((foo (collect-first (scan* 'foo))))
+                       (setf (a foo) 't1)
+                       (sleep 0.2)))))))
+          (t2 (bt:make-thread
+               (lambda ()
+                 (sleep 0.1)
+                 (with-connection ()
+                   (with-transaction ()
+                     (let ((foo (collect-first (scan* 'foo))))
+                       (signals info.read-eval-print.nando:concurrent-modify-error
+                         (setf (b foo) 't2)))))))))
+      (bt:join-thread t1)
+      (bt:join-thread t2)
+      (let ((foo (collect-first (scan* 'foo))))
+        (is (eq 't1 (a foo)))))))
+
+(deftest test-for-update ()
+  (with-connection ()
+    (clear-strage)
+    (make-instance 'foo :a 1)
+    (let ((t1 (bt:make-thread
+               (lambda ()
+                 (with-connection ()
+                   (with-transaction ()
+                     (collect-first (scan* 'foo :for-updatet t))
+                     (sleep 0.2))))))
+          (t2 (bt:make-thread
+               (lambda ()
+                 (sleep 0.1)
+                 (with-connection ()
+                   (with-transaction ()
+                     (signals info.read-eval-print.nando:concurrent-modify-error
+                       (collect-first (scan* 'foo :for-update t)))))))))
+      (bt:join-thread t1)
+      (bt:join-thread t2))))
 
 
 (info.read-eval-print.nando.test)
