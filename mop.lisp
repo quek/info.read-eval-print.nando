@@ -88,29 +88,6 @@ should only be used when speed is critical.
                  :unique (slot-unique slot-def)))
 
 
-(defun slot-definition-equal (slot-1 slot-2)
-  (and (equal (slot-persistence slot-1) (slot-persistence slot-2))
-       (index-spec-equal (slot-index slot-1) (slot-index slot-2))
-       (equal (slot-unique slot-1) (slot-unique slot-2))))
-
-
-(defun compare-slots (old-slots slots)
-  "Returns three values: a list of added slots, a list of discarded slots
-and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
-  (let ((added-slots (set-difference slots old-slots
-                                     :key #'c2mop:slot-definition-name))
-        (discarded-slots (set-difference old-slots slots
-                                         :key #'c2mop:slot-definition-name))
-        (changed-slots
-         (loop for slot in slots
-               for old-slot = (find (c2cl:slot-definition-name slot) old-slots
-                                    :key #'c2cl:slot-definition-name)
-               if (and old-slot
-                       (not (slot-definition-equal slot old-slot)))
-               collect slot)))
-    (values added-slots discarded-slots changed-slots)))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod c2mop:validate-superclass ((class c2mop:standard-class)
@@ -184,16 +161,7 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
       (cons root-class direct-superclasses))))
 
 (defun update-indexes (class)
-  ;; Update class and slot indexes.
-  (when (fboundp 'current-rucksack)
-    ;; This function is also called during compilation of Rucksack
-    ;; (when the class definition of PERSISTENT-OBJECT is compiled).
-    ;; At that stage the CURRENT-RUCKSACK function isn't even defined
-    ;; yet, so we shouldn't call it.
-    (let ((rucksack (current-rucksack)))
-      (when rucksack
-        (rucksack-update-class-index rucksack class)
-        (rucksack-update-slot-indexes rucksack class)))))
+  class)
 
 
 (defmethod finalize-inheritance :after ((class persistent-class))
@@ -203,12 +171,6 @@ and a list of changed (according to SLOT-DEFINITION-EQUAL) slots."
   ;; Register all (effective) persistent slots.
   (setf (class-persistent-slots class)
         (remove-if-not #'slot-persistence (c2mop:class-slots class)))
-  ;; Update schemas if necessary.
-  (when (fboundp 'current-rucksack) ; see comment for UPDATE-INDEXES
-    (let ((rucksack (current-rucksack)))
-      (when rucksack
-        (maybe-update-schemas (schema-table (rucksack-cache rucksack))
-                              class))))
   ;;
   (setf (class-changed-p class) nil))
 
