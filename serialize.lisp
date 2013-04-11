@@ -71,8 +71,3 @@ stream in a serializer."))
     (loop for (k v) on (nthcdr 5 data) by #'cddr
           do (setf (gethash k hash) v))
     hash))
-
-(deserialize (print (serialize (alexandria:plist-hash-table '(ab 12 "hi" wo)))))
-;;→ 
-;;   "(INFO.READ-EVAL-PRINT.NANDO::+HASH-TABLE+ EQL 16 1.5 1.0 INFO.READ-EVAL-PRINT.NANDO::AB 12 \"hi\" INFO.READ-EVAL-PRINT.NANDO::WO)" 
-;;⇒ #<HASH-TABLE :TEST EQL :COUNT 2 {1006C9A1C3}>
