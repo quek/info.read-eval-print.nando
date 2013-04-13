@@ -19,21 +19,12 @@
 (defclass persistent-class (c2mop:standard-class)
   ((persistent-slots :initform '()
                      :accessor class-persistent-slots)
-   (index :initarg :index :initform nil
-          :documentation "Can be either NIL (for no class index) or T
- (for the standard class index).  Default value is NIL.")
    (changed-p :initform nil :accessor class-changed-p
-              :documentation "True iff the class definition was changed
+              :documentation "True if the class definition was changed
 but the schemas haven't been updated yet.  This flag is necessary because
 some MOP implementations don't call FINALIZE-INHERITANCE when a class
 was redefined and a new instance of the redefined class is created.")))
 
-
-(defmethod class-index ((class persistent-class))
-  ;; According to the MOP, the INDEX slot is initialized with the
-  ;; list of items following the :INDEX option, but we're only
-  ;; interested in the first item of that list.
-  (first (slot-value class 'index)))
 
 ;;
 ;; Persistent slot definitions

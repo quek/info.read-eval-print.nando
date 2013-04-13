@@ -13,22 +13,10 @@
                            :in hu.dwim.stefil:root-suite))
 
 
-(defclass not-index-foo ()
-  ()
-  (:metaclass persistent-class))
-
-(deftest test-not-index-foo ()
-  (with-connection ()
-    (clear-strage)
-    (make-instance 'not-index-foo)
-     (is (eql '() (collect (scan* 'not-index-foo))))))
-
-
 (defclass foo ()
-  ((a :initarg :a :accessor a :index t)
-   (b :initarg :b :accessor b :index string)
+  ((a :initarg :a :accessor a)
+   (b :initarg :b :accessor b)
    (c :initarg :c :accessor c :initform 0))
-  (:index t)
   (:metaclass persistent-class))
 
 (deftest test-foo ()

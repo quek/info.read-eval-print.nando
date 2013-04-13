@@ -24,10 +24,9 @@ inherit from this class."))
                                         &key)
   (let* ((*initializing-instance* t)
          (result (call-next-method)))
-    (when (class-index (class-of object))
-      (if *transaction*
-          (add-dirty-object *transaction* object)
-          (create-object object)))
+    (if *transaction*
+        (add-dirty-object *transaction* object)
+        (create-object object))
     result))
 
 (defmethod update-slot-index (class object slot
