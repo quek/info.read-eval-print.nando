@@ -6,7 +6,8 @@
 
 (defclass persistent-object ()
   ((_id :initarg :_id :reader _id
-        :persistence nil :index nil))
+        :persistence nil :index nil)
+   (dirty :initform nil :reader dirty-p :persistence nil))
   (:metaclass persistent-class)
   (:index nil)
   (:documentation "Classes of metaclass PERSISTENT-CLASS automatically
@@ -44,17 +45,19 @@ inherit from this class."))
 (defun create-object (object)
   (if *transaction*
       (add-dirty-object *transaction* object)
-      (setf (slot-value object '_id)
-            (apply #'save-object-data
-                   (symbol-to-key +class+) (serialize (class-name (class-of object)))
-                   (%slot-values object)))))
+      (prog1 (setf (slot-value object '_id)
+                   (apply #'save-object-data
+                          (symbol-to-key +class+) (serialize (class-name (class-of object)))
+                          (%slot-values object)))
+        (setf (slot-value object 'dirty) nil))))
 
 (defun update-object (object)
   (if *transaction*
       (add-dirty-object *transaction* object)
-      (apply #'update-object-data
-             (slot-value object '_id)
-             (%slot-values object))))
+      (prog1 (apply #'update-object-data
+              (slot-value object '_id)
+              (%slot-values object))
+        (setf (slot-value object 'dirty) nil))))
 
 (defun lock-object (object)
   (if (new-object-p object)
@@ -79,7 +82,9 @@ inherit from this class."))
 
 (defmethod print-object ((object persistent-object) stream)
   (print-unreadable-object (object stream :type t :identity nil)
-    (format stream "~a" (slot-value object '_id))))
+    (format stream "~a" (if (slot-boundp object '_id)
+                            (slot-value object '_id)
+                            ":new"))))
 
 
 ;; It's a bit stupid that we have to write the same code for three
@@ -101,18 +106,22 @@ inherit from this class."))
                                                  slot)
   (maybe-dereference-proxy (call-next-method)))
 
+(macrolet ((m ()
+             `(prog1 (call-next-method)
+                (unless (eq 'dirty (c2mop:slot-definition-name slot-def))
+                  (setf (slot-value object 'dirty) t)))))
 
-(defmethod (setf c2mop:slot-value-using-class) :around (new-value
-                                                        (class persistent-class)
+  (defmethod (setf c2mop:slot-value-using-class) :around (new-value
+                                                          (class persistent-class)
+                                                          object
+                                                          slot-def)
+    (m))
+
+
+  (defmethod c2mop:slot-makunbound-using-class :around ((class persistent-class)
                                                         object
-                                                        slot-name-or-def)
-  (call-next-method))
-
-
-(defmethod c2mop:slot-makunbound-using-class :around ((class persistent-class)
-                                                      object
-                                                      slot-name-or-def)
-  (call-next-method))
+                                                        slot-def)
+    (m)))
 
 
 

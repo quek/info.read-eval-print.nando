@@ -1,10 +1,12 @@
 (in-package :info.read-eval-print.nando)
 
-(defvar *connection*)
-(defvar *mongo*)
-(defvar *object-collection*)
+(defvar *mongo* nil "MongoDB database instance")
+(defvar *object-collection* nil "MongoDB collection instance")
 
-(defparameter *db* "cl")
+(defvar *connection* nil "MongoDB connection instance")
+
+(defparameter *db-name* "nando" "MongoDB database name")
+(defparameter *collection-name* "nando" "MonogoDB collection name")
 (defparameter *db-host* "localhost")
 (defparameter *db-port* 27017)
 
@@ -13,7 +15,7 @@
 (defun symbol-to-key (symbol)
   (substitute #\space #\. (serialize symbol)))
 
-(defmacro with-connection ((&key (db *db*)
+(defmacro with-connection ((&key (db *db-name*)
                               (host *db-host*)
                               (port *db-port*))
                            &body body)

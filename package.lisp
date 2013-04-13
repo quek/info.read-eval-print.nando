@@ -3,7 +3,13 @@
  (:use :cl :anaphora)
  (:local-nicknames (:m :info.read-eval-print.mongo)
                    (:b :info.read-eval-print.bson))
- (:export #:*connection*
+ (:export #:*db-name*
+          #:*collection-name*
+          #:*db-host*
+          #:*db-port*
+
+          #:*connection*
+
           #:with-connection
           #:with-transaction
           #:clear-strage
