@@ -86,6 +86,16 @@
     (let ((foo (load-object (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
       (is (eq :inner (a (a foo)))))))
 
+(deftest test-update-proxf ()
+  (with-connection ()
+    (clear-strage)
+    (let ((_id (_id (create-instance 'foo :a (make-instance 'foo :a :inner)))))
+      (let* ((foo (load-object _id)))
+        (setf (a (a foo)) :new-value)
+        (save-object foo))
+      (let ((foo (load-object _id)))
+        (is (eq :new-value (a (a foo))))))))
+
 (deftest test-skip-limit ()
   (with-connection ()
     (clear-strage)
@@ -156,6 +166,16 @@
                 (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
       (let ((foo (load-object id)))
         (is (eq :inner (a (a foo))))))))
+
+(deftest test-transaction-update-proxy ()
+  (with-connection ()
+    (clear-strage)
+    (let ((id (_id (create-instance 'foo :a (make-instance 'foo :a :inner)))))
+      (with-transaction ()
+        (let ((foo (load-object id)))
+          (setf (a (a foo)) :new-value)
+          (save-object foo)))
+      (is (eq :new-value (a (a (load-object id))))))))
 
 (define-condition test-commitable-error (error) ())
 (deftest test-commitable-error ()

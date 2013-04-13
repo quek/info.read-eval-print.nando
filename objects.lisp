@@ -52,7 +52,8 @@ p-position
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defclass proxy ()
-  ((_id :initarg :_id :reader _id))
+  ((_id :initarg :_id :reader _id)
+   (dereferenced))
   (:documentation "Proxies are some kind of in-memory forwarding pointer
 to data in the cache.  They are never saved on disk."))
 
@@ -61,7 +62,10 @@ to data in the cache.  They are never saved on disk."))
 (defmethod maybe-dereference-proxy ((proxy proxy))
   (if *dont-dereference-proxies*
       proxy
-      (load-object (_id proxy))))
+      (if (slot-boundp proxy 'dereferenced)
+          (slot-value proxy 'dereferenced)
+          (aprog1 (load-object (_id proxy))
+            (setf (slot-value proxy 'dereferenced) it)))))
 
 (defmethod maybe-dereference-proxy (object)
   ;; Default: just return the object.

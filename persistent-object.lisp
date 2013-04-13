@@ -45,19 +45,18 @@ inherit from this class."))
   (if *transaction*
       (add-dirty-object *transaction* object)
       (progn
+        (setf (slot-value object 'dirty) nil)
         (apply #'save-object-data
                (_id object) (symbol-to-key +class+) (serialize (class-name (class-of object)))
-               (%slot-values object))
-        (setf (slot-value object 'dirty) nil)))
+               (%slot-values object))))
   object)
 
 (defun update-object (object)
   (if *transaction*
       (add-dirty-object *transaction* object)
-      (prog1 (apply #'update-object-data
-              (slot-value object '_id)
-              (%slot-values object))
-        (setf (slot-value object 'dirty) nil)))
+      (progn
+        (setf (slot-value object 'dirty) nil)
+        (apply #'update-object-data (slot-value object '_id) (%slot-values object))))
   object)
 
 (defun lock-object (object)
@@ -129,8 +128,10 @@ inherit from this class."))
 (defmethod serialize ((object persistent-object))
   ;; When the serializer meets a persistent object, it only needs to save the
   ;; object id.  The cache will make sure that the object is saved elsewhere.
-  (when (new-p object)
-    (save-object object))
+  (cond  ((new-p object)
+          (create-object object))
+         ((dirty-p object)
+          (update-object object)))
   (_id object))
 
 ;;
