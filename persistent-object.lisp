@@ -7,9 +7,9 @@
 (defclass persistent-object ()
   ((_id :initarg :_id :reader _id
         :persistence nil :index nil)
-   (dirty :initform nil :reader dirty-p :persistence nil))
+   (dirty :initform nil :reader dirty-p :persistence nil)
+   (new :initform t :reader new-p :persistence nil))
   (:metaclass persistent-class)
-  (:index nil)
   (:documentation "Classes of metaclass PERSISTENT-CLASS automatically
 inherit from this class."))
 
@@ -34,22 +34,22 @@ inherit from this class."))
   (aprog1 (apply #'make-instance class initargs)
     (save-object it)))
 
-(defun new-object-p (object)
-  (not (slot-boundp object '_id)))
-
 (defun save-object (object)
-  (if (new-object-p object)
+  (if (new-p object)
       (create-object object)
       (update-object object)))
 
 (defun create-object (object)
+  (unless (slot-boundp object '_id)
+    (setf (slot-value object '_id) (b:object-id)))
   (if *transaction*
       (add-dirty-object *transaction* object)
-      (prog1 (setf (slot-value object '_id)
-                   (apply #'save-object-data
-                          (symbol-to-key +class+) (serialize (class-name (class-of object)))
-                          (%slot-values object)))
-        (setf (slot-value object 'dirty) nil))))
+      (progn
+        (apply #'save-object-data
+               (_id object) (symbol-to-key +class+) (serialize (class-name (class-of object)))
+               (%slot-values object))
+        (setf (slot-value object 'dirty) nil)))
+  object)
 
 (defun update-object (object)
   (if *transaction*
@@ -57,22 +57,23 @@ inherit from this class."))
       (prog1 (apply #'update-object-data
               (slot-value object '_id)
               (%slot-values object))
-        (setf (slot-value object 'dirty) nil))))
+        (setf (slot-value object 'dirty) nil)))
+  object)
 
 (defun lock-object (object)
-  (if (new-object-p object)
+  (if (new-p object)
       t
       (lock-object-data (_id object))))
 
 (defun unlock-object (object)
-  (if (new-object-p object)
+  (if (new-p object)
       t
       (unlock-object-data (_id object))))
 
 (defun %slot-values (object)
   (loop for slot in (c2mop:class-slots (class-of object))
         for slot-name = (c2mop:slot-definition-name slot)
-        if (slot-persistence slot)
+        if (slot-persistence-p slot)
           append (list (symbol-to-key slot-name)
                        (if (slot-boundp object slot-name)
                            (serialize (slot-value object slot-name))
@@ -108,7 +109,7 @@ inherit from this class."))
 
 (macrolet ((m ()
              `(prog1 (call-next-method)
-                (unless (eq 'dirty (c2mop:slot-definition-name slot-def))
+                (when (slot-persistence-p slot-def)
                   (setf (slot-value object 'dirty) t)))))
 
   (defmethod (setf c2mop:slot-value-using-class) :around (new-value
@@ -128,6 +129,8 @@ inherit from this class."))
 (defmethod serialize ((object persistent-object))
   ;; When the serializer meets a persistent object, it only needs to save the
   ;; object id.  The cache will make sure that the object is saved elsewhere.
+  (when (new-p object)
+    (save-object object))
   (_id object))
 
 ;;
@@ -143,9 +146,13 @@ inherit from this class."))
          (object (allocate-instance class))
          (*initializing-instance* t))
     (setf (slot-value object '_id) (b:value doc :_id))
+    (setf (slot-value object 'new) nil)
+    (setf (slot-value object 'dirty) nil)
     (%store-slots object doc)))
 
 (defun reload-object (object)
+  (setf (slot-value object 'new) nil)
+  (setf (slot-value object 'dirty) nil)
   (%store-slots object (find-doc-by-id (_id object))))
 
 (defun %store-slots (object doc)

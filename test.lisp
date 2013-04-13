@@ -83,7 +83,7 @@
 (deftest test-proxy ()
   (with-connection ()
     (clear-strage)
-    (let ((foo (load-object (_id (create-instance 'foo :a (create-instance 'foo :a :inner))))))
+    (let ((foo (load-object (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
       (is (eq :inner (a (a foo)))))))
 
 (deftest test-skip-limit ()
@@ -148,6 +148,14 @@
       (bt:join-thread t2)
       (let ((foo (collect-first (scan* 'foo))))
         (is (eq 't1 (a foo)))))))
+
+(deftest test-transaction-save-proxy ()
+  (with-connection ()
+    (clear-strage)
+    (let ((id (with-transaction ()
+                (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
+      (let ((foo (load-object id)))
+        (is (eq :inner (a (a foo))))))))
 
 (define-condition test-commitable-error (error) ())
 (deftest test-commitable-error ()

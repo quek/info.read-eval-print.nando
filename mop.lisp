@@ -33,7 +33,7 @@ was redefined and a new instance of the redefined class is created.")))
 (defclass persistent-slot-mixin ()
   ((persistence :initarg :persistence
                 :initform t
-                :reader slot-persistence
+                :reader slot-persistence-p
                 :documentation "T for persistent slots, NIL for
 transient slots.  Default value is T.")
    (index :initarg :index
@@ -74,7 +74,7 @@ should only be used when speed is critical.
                  :allocation (c2mop:slot-definition-allocation slot-def)
                  :type (c2mop:slot-definition-type slot-def)
                  ;; Our own options.
-                 :persistence (slot-persistence slot-def)
+                 :persistence (slot-persistence-p slot-def)
                  :index (slot-index slot-def)
                  :unique (slot-unique slot-def)))
 
@@ -161,7 +161,7 @@ should only be used when speed is critical.
 (defun update-slot-info (class)
   ;; Register all (effective) persistent slots.
   (setf (class-persistent-slots class)
-        (remove-if-not #'slot-persistence (c2mop:class-slots class)))
+        (remove-if-not #'slot-persistence-p (c2mop:class-slots class)))
   ;;
   (setf (class-changed-p class) nil))
 
@@ -192,7 +192,7 @@ should only be used when speed is critical.
 
     ;; If any direct slot is persistent, then the effective one is too.
     (setf (slot-value effective-slotdef 'persistence)
-          (some #'slot-persistence persistent-slotdefs))
+          (some #'slot-persistence-p persistent-slotdefs))
 
     ;; If exactly one direct slot is indexed, then the effective one is
     ;; too. If more then one is indexed, signal an error.

@@ -40,7 +40,7 @@
   (with-slots (dirty-objects) transaction
     (let ((xs (reverse dirty-objects)))
       (mapc (lambda (x)
-              (unless (new-object-p x)
+              (unless (new-p x)
                 (reload-object x)))
             xs)
       (mapc #'unlock-object xs))))

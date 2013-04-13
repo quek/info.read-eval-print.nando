@@ -30,13 +30,11 @@
 (defun clear-strage (&optional (*object-collection* *object-collection*))
   (m:delete *object-collection* nil))
 
-(defun save-object-data (&rest fields)
-  (let* ((object-id (b:object-id))
-         (doc (b:bson :_id object-id)))
+(defun save-object-data (_id &rest fields)
+  (let* ((doc (b:bson :_id _id)))
     (iterate (((k v) (scan-plist fields)))
       (setf (b:value doc k) v))
-    (m:insert *object-collection* doc)
-    object-id))
+    (m:insert *object-collection* doc)))
 
 (defun update-object-data (_id &rest fields)
   (let ((query (b:bson :_id _id))
