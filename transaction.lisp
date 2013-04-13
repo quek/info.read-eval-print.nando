@@ -31,7 +31,8 @@
 
 (defmethod commit ((transaction transaction))
   (with-slots (dirty-objects) transaction
-    (let ((xs (reverse dirty-objects)))
+    (let ((xs (reverse dirty-objects))
+          (*transaction* nil))
       (mapc #'save-object xs)
       (mapc #'unlock-object xs))))
 

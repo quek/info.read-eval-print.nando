@@ -11,7 +11,9 @@
           #:persistent-class
 
           #:_id
+          #:create-instance
           #:load-object
+          #:save-object
 
           #:nando-error
           #:concurrent-modify-error

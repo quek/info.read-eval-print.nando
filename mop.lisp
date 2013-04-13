@@ -165,10 +165,6 @@ should only be used when speed is critical.
   ;;
   (setf (class-changed-p class) nil))
 
-(defun maybe-update-slot-info (class)
-  (when (class-changed-p class)
-    (update-slot-info class)))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Computing slot definitions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

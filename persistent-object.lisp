@@ -22,30 +22,16 @@ inherit from this class."))
 
 (defmethod initialize-instance :around ((object persistent-object)
                                         &key)
-  (let* ((*initializing-instance* t)
-         (result (call-next-method)))
-    (if *transaction*
-        (add-dirty-object *transaction* object)
-        (create-object object))
-    result))
-
-(defmethod update-slot-index (class object slot
-                              old-value new-value
-                              old-boundp new-boundp)
-  "SLOT is a slot-definition, not a slot name."
-  (let ((_id (_id object))
-        (class-name (class-name class))
-        (slot-name (c2mop:slot-definition-name slot))
-        (index-type (slot-index slot)))
-    (when old-boundp
-      (delete-slot-index _id class-name slot-name index-type old-value))
-    (when new-boundp
-      (add-slot-index _id class-name slot-name index-type new-value))))
-
+  (let* ((*initializing-instance* t))
+    (call-next-method)))
 
 
 (defconstant +class+ '+class+)
 (defconstant +unbound+ '+unbound+)
+
+(defun create-instance (class &rest initargs)
+  (aprog1 (apply #'make-instance class initargs)
+    (save-object it)))
 
 (defun new-object-p (object)
   (not (slot-boundp object '_id)))
@@ -56,15 +42,19 @@ inherit from this class."))
       (update-object object)))
 
 (defun create-object (object)
-  (setf (slot-value object '_id)
-        (apply #'save-object-data
-               (symbol-to-key +class+) (serialize (class-name (class-of object)))
-               (%slot-values object))))
+  (if *transaction*
+      (add-dirty-object *transaction* object)
+      (setf (slot-value object '_id)
+            (apply #'save-object-data
+                   (symbol-to-key +class+) (serialize (class-name (class-of object)))
+                   (%slot-values object)))))
 
 (defun update-object (object)
-  (apply #'update-object-data
-         (slot-value object '_id)
-         (%slot-values object)))
+  (if *transaction*
+      (add-dirty-object *transaction* object)
+      (apply #'update-object-data
+             (slot-value object '_id)
+             (%slot-values object))))
 
 (defun lock-object (object)
   (if (new-object-p object)
@@ -109,8 +99,6 @@ inherit from this class."))
 (defmethod c2mop:slot-value-using-class :around ((class persistent-class)
                                                  object
                                                  slot)
-  (maybe-update-slot-info class)
-  ;; Automatically dereference proxies.
   (maybe-dereference-proxy (call-next-method)))
 
 
@@ -118,58 +106,13 @@ inherit from this class."))
                                                         (class persistent-class)
                                                         object
                                                         slot-name-or-def)
-  (maybe-update-slot-info class)
-  ;; If this is a persistent slot, tell the cache that this object
-  ;; has changed. The cache will save it when necessary.
-  (multiple-value-bind (slot slot-name) (slot-def-and-name class slot-name-or-def)
-    (if (slot-persistence slot)
-        (let* ((old-boundp (c2mop:slot-boundp-using-class class object slot-name-or-def))
-               (old-value (and old-boundp
-                               (c2mop:slot-value-using-class class object slot-name-or-def)))
-               (result (call-next-method)))
-          (unless *initializing-instance*
-            (if *transaction*
-                (add-dirty-object *transaction* object)
-                (save-slot-value (_id object)
-                                 (substitute #\space #\. (serialize slot-name))
-                                 (serialize new-value))))
-          result)
-        (call-next-method))))
+  (call-next-method))
 
 
 (defmethod c2mop:slot-makunbound-using-class :around ((class persistent-class)
                                                       object
                                                       slot-name-or-def)
-  (maybe-update-slot-info class)
-  ;; If this is a persistent slot, tell the cache that this object
-  ;; has changed. Rely on the cache to save it when necessary.
-  (let ((slot (slot-def-and-name class slot-name-or-def)))
-    (if (and (slot-persistence slot)
-             ;; If the RUCKSACK slot isn't bound yet, the object is
-             ;; just being loaded from disk and we don't need to
-             ;; do anything special.
-             (slot-boundp object 'rucksack))
-        (let* ((old-boundp (c2mop:slot-boundp-using-class class object slot-name-or-def))
-               (old-value
-                 (and old-boundp
-                      (c2mop:slot-value-using-class class object slot-name-or-def)))
-               (result (call-next-method)))
-          (cache-touch-object object)
-          (rucksack-maybe-index-changed-slot (rucksack object)
-                                             class object slot
-                                             old-value nil
-                                             old-boundp nil)
-          result)
-        (call-next-method))))
-
-
-(defun slot-def-and-name (class slot-name-or-def)
-  "Returns (1) slot definition and (2) slot name."
-  #+lispworks(values (find slot-name-or-def (class-slots class)
-                           :key #'slot-definition-name)
-                     slot-name-or-def)
-  #-lispworks(values slot-name-or-def
-                     (c2mop:slot-definition-name slot-name-or-def)))
+  (call-next-method))
 
 
 
@@ -207,49 +150,3 @@ inherit from this class."))
                        (not (eq value +unbound+)))
               (setf (slot-value object slot-name) value)))))))
   object)
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Updating persistent instances
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; When a persistent object must be loaded from disk, Rucksack loads the
-;; schema nr and finds the corresponding schema.  If the schema is obsolete
-;; (i.e. there is a schema for the same class with a higher version number),
-;; Rucksack calls the generic function UPDATE-PERSISTENT-INSTANCE-FOR-REDEFINED-CLASS
-;; after calling ALLOCATE-INSTANCE for the current class version.  The generic
-;; function is very similar to UPDATE-INSTANCE-FOR-REDEFINED-CLASS: it takes a
-;; list of added slots, a list of deleted slots and a property list containing
-;; the slot names and values for slots that were discarded and had values.
-
-(defgeneric update-persistent-instance-for-redefined-class
-    (instance added-slots discarded-slots property-list &key)
-  (:method ((instance persistent-object) added-slots discarded-slots plist
-            &key)
-   ;; Default method: ignore the discarded slots and initialize added slots
-   ;; according to their initforms.  We do this 'by hand' and not by calling
-   ;; SHARED-INITIALIZE because slot indexes may need to be updated too.
-    (let ((slots (c2mop:class-slots (class-of instance))))
-     (loop for slot-name in added-slots
-           for slot = (find slot-name slots :key #'c2mop:slot-definition-name)
-           for initfunction = (and slot
-                                   (c2mop:slot-definition-initfunction slot))
-           when initfunction
-           ;; NOTE: We don't handle initargs, and I think we don't need to.
-           ;; We follow the CLHS description of UPDATE-INSTANCE-FOR-REDEFINED-CLASS,
-           ;; which says: "When it is called by the system to update an
-           ;; instance whose class has been redefined, no initialization
-           ;; arguments are provided."
-           do (setf (slot-value instance slot-name) (funcall initfunction))))))
-
-
-(defmethod update-instance-for-redefined-class
-           ((object persistent-object) added-slots discarded-slots plist
-            &rest initargs &key)
-  ;; This method exists for updating in-memory persistent objects
-  ;; of which the class definition has changed.
-  (declare (ignore initargs)) ; there shouldn't be any, anyway
-  (cache-touch-object object)
-  (update-persistent-instance-for-redefined-class object added-slots
-                                                  discarded-slots plist))
