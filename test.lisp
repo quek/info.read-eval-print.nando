@@ -149,6 +149,21 @@
       (let ((foo (collect-first (scan* 'foo))))
         (is (eq 't1 (a foo)))))))
 
+(define-condition test-commitable-error (error) ())
+(deftest test-commitable-error ()
+  (with-connection ()
+    (clear-strage)
+    (signals test-commitable-error
+      (with-transaction ()
+        (make-instance 'foo)
+        (error 'test-commitable-error)))
+    (is (zerop (collect-length (scan* 'foo))))
+    (signals test-commitable-error
+      (with-transaction (:commitable-errors (test-commitable-error))
+        (make-instance 'foo)
+        (error 'test-commitable-error)))
+    (is (= 1 (collect-length (scan* 'foo))))))
+
 (deftest test-for-update ()
   (with-connection ()
     (clear-strage)
