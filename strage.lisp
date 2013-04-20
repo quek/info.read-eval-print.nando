@@ -7,8 +7,7 @@
 
 (defparameter *db-name* "nando" "MongoDB database name")
 (defparameter *collection-name* "nando" "MonogoDB collection name")
-(defparameter *db-host* "localhost")
-(defparameter *db-port* 27017)
+(defparameter *mongo-node* "localhost:27017")
 
 (alexandria:define-constant +lock-key+ "__lock_key__" :test #'equal)
 
@@ -16,10 +15,9 @@
   (substitute #\space #\. (serialize symbol)))
 
 (defmacro with-connection ((&key (db *db-name*)
-                              (host *db-host*)
-                              (port *db-port*))
+                                 (mongo-node *mongo-node*))
                            &body body)
-  `(m:with-connection (*connection* :host ,host :port ,port)
+  `(m:with-connection (*connection* ,mongo-node)
      (let* ((*mongo* (m:db *connection* ,db))
             (*object-collection* (m:collection *mongo* "object")))
        ,@body)))
