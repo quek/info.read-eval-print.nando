@@ -2,10 +2,10 @@
   (ql:quickload :info.read-eval-print.nando))
 
 (info.read-eval-print.series-ext:sdefpackage
- :info.read-eval-print.nando.scranch
+ :info.read-eval-print.nando.scrach
  (:use :cl :anaphora :info.read-eval-print.nando))
 
-(in-package :info.read-eval-print.nando.scranch)
+(in-package :info.read-eval-print.nando.scrach)
 
 (with-connection ()
   (clear-strage))
