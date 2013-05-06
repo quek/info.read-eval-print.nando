@@ -3,8 +3,6 @@
 (defvar *mongo* nil "MongoDB database instance")
 (defvar *object-collection* nil "MongoDB collection instance")
 
-(defvar *connection* nil "MongoDB connection instance")
-
 (defparameter *db-name* "nando" "MongoDB database name")
 (defparameter *collection-name* "nando" "MonogoDB collection name")
 (defparameter *mongo-node* "localhost:27017")
@@ -17,8 +15,8 @@
 (defmacro with-connection ((&key (db *db-name*)
                                  (mongo-node *mongo-node*))
                            &body body)
-  `(m:with-connection (*connection* ,mongo-node)
-     (let* ((*mongo* (m:db *connection* ,db))
+  `(m:with-connection (*default-connection* ,mongo-node nil)
+     (let* ((*mongo* (m:db *default-connection* ,db))
             (*object-collection* (m:collection *mongo* "object")))
        ,@body)))
 
