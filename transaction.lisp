@@ -33,7 +33,7 @@
   (with-slots (dirty-objects) transaction
     (let ((xs (reverse dirty-objects))
           (*transaction* nil))
-      (mapc #'save-object xs)
+      (mapc #'save xs)
       (mapc #'unlock-object xs))))
 
 (defmethod rollback ((transaction transaction))

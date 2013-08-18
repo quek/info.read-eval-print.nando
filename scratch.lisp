@@ -7,6 +7,8 @@
 
 (in-package :info.read-eval-print.nando.scrach)
 
+
+
 (with-connection ()
   (clear-strage))
 
@@ -17,13 +19,23 @@
   (:metaclass persistent-class))
 
 (with-connection ()
-  (save-object (make-instance 'foo)))
+  (save (make-instance 'foo)))
 ;;⇒ #<FOO ObjectId("521080E4BB34623C5B000059")>
 
 
 (with-connection ()
   (collect (scan* 'foo)))
 ;;⇒ (#<FOO ObjectId("52108474BB34623C5B00005A")>)
+
+
+
+(connect)
+;;⇒ #<INFO.READ-EVAL-PRINT.MONGO:COLLECTION {100F67FC83}>
+(save (make-instance 'foo))
+;;⇒ #<FOO ObjectId("52108F1EBB34623C5B0000B3")>
+(collect (scan* 'foo))
+;;⇒ (#<FOO ObjectId("52108F1EBB34623C5B0000B3")>)
+
 
 
 (collect (with-finding foo

@@ -34,7 +34,7 @@
     (let ((foo (make-instance 'foo :a 1 :b "a")))
       (setf (a foo) 100)
       (setf (b foo) "まみむめも♪")
-      (save-object foo)
+      (save foo)
       (let ((loaded (load-object (_id foo))))
         (is (= 100 (a loaded)))
         (is (string= "まみむめも♪" (b loaded)))))
@@ -86,13 +86,13 @@
     (let ((foo (load-object (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
       (is (eq :inner (a (a foo)))))))
 
-(deftest test-update-proxf ()
+(deftest test-update-proxy ()
   (with-connection ()
     (clear-strage)
     (let ((_id (_id (create-instance 'foo :a (make-instance 'foo :a :inner)))))
       (let* ((foo (load-object _id)))
         (setf (a (a foo)) :new-value)
-        (save-object foo))
+        (save foo))
       (let ((foo (load-object _id)))
         (is (eq :new-value (a (a foo))))))))
 
@@ -143,7 +143,7 @@
                    (with-transaction ()
                      (let ((foo (collect-first (scan* 'foo))))
                        (setf (a foo) 't1)
-                       (save-object foo)
+                       (save foo)
                        (sleep 0.2)))))))
           (t2 (bt:make-thread
                (lambda ()
@@ -153,7 +153,7 @@
                      (let ((foo (collect-first (scan* 'foo))))
                        (signals concurrent-modify-error
                          (setf (b foo) 't2)
-                         (save-object foo)))))))))
+                         (save foo)))))))))
       (bt:join-thread t1)
       (bt:join-thread t2)
       (let ((foo (collect-first (scan* 'foo))))
@@ -174,7 +174,7 @@
       (with-transaction ()
         (let ((foo (load-object id)))
           (setf (a (a foo)) :new-value)
-          (save-object foo)))
+          (save foo)))
       (is (eq :new-value (a (a (load-object id))))))))
 
 (define-condition test-commitable-error (error) ())

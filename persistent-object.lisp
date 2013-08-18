@@ -32,9 +32,9 @@ inherit from this class."))
 
 (defun create-instance (class &rest initargs)
   (aprog1 (apply #'make-instance class initargs)
-    (save-object it)))
+    (save it)))
 
-(defun save-object (object)
+(defun save (object)
   (if (new-p object)
       (create-object object)
       (update-object object)))

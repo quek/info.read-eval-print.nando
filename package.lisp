@@ -10,7 +10,7 @@
           #:*db-port*
 
           #:*default-connection*
-
+          #:connect
           #:with-connection
           #:with-transaction
           #:clear-strage
@@ -20,7 +20,7 @@
           #:_id
           #:create-instance
           #:load-object
-          #:save-object
+          #:save
 
           #:nando-error
           #:concurrent-modify-error
