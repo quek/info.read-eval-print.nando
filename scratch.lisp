@@ -17,11 +17,13 @@
   (:metaclass persistent-class))
 
 (with-connection ()
-  (make-instance 'foo))
+  (save-object (make-instance 'foo)))
+;;⇒ #<FOO ObjectId("521080E4BB34623C5B000059")>
+
 
 (with-connection ()
   (collect (scan* 'foo)))
-;;⇒ NIL
+;;⇒ (#<FOO ObjectId("52108474BB34623C5B00005A")>)
 
 
 (collect (with-finding foo

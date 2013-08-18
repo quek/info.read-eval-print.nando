@@ -27,7 +27,7 @@ inherit from this class."))
     (call-next-method)))
 
 
-(defconstant +class+ '+class+)
+(alexandria:define-constant +class+ "c" :test #'string=)
 (defconstant +unbound+ '+unbound+)
 
 (defun create-instance (class &rest initargs)
@@ -47,7 +47,8 @@ inherit from this class."))
       (progn
         (setf (slot-value object 'dirty) nil)
         (apply #'save-object-data
-               (_id object) (symbol-to-key +class+) (serialize (class-name (class-of object)))
+               (_id object)
+               +class+ (serialize (class-name (class-of object)))
                (%slot-values object))))
   object)
 
@@ -141,9 +142,7 @@ inherit from this class."))
   (load-object (find-doc-by-id id)))
 
 (defmethod load-object ((doc b:bson))
-  (let* ((class (find-class (deserialize (b:value
-                                          doc
-                                          (substitute #\space #\. (serialize +class+))))))
+  (let* ((class (find-class (deserialize (b:value doc +class+))))
          (object (allocate-instance class))
          (*initializing-instance* t))
     (setf (slot-value object '_id) (b:value doc :_id))
@@ -163,7 +162,6 @@ inherit from this class."))
           (b:value doc (substitute #\space #\. (serialize slot-name)))
         (when ok
           (let ((value (deserialize value)))
-            (when (and (not (eq value +class+))
-                       (not (eq value +unbound+)))
+            (when (not (eq value +unbound+))
               (setf (slot-value object slot-name) value)))))))
   object)

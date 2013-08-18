@@ -8,7 +8,7 @@
                                                      for-update)
   (when (and for-update (null *transaction*))
     (error 'transaction-required-error))
-  (let* ((query (let ((query (b:bson (symbol-to-key +class+) (serialize (class-name class)))))
+  (let* ((query (let ((query (b:bson +class+ (serialize (class-name class)))))
                   (let ((kv (compute-where (aand (car where)
                                                  (intern (symbol-name it) :keyword))
                                            (cdr where))))
