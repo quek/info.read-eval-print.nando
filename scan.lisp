@@ -9,9 +9,7 @@
   (when (and for-update (null *transaction*))
     (error 'transaction-required-error))
   (let* ((query (let ((query (b:bson +class+ (serialize (class-name class)))))
-                  (let ((kv (compute-where (aand (car where)
-                                                 (intern (symbol-name it) :keyword))
-                                           (cdr where))))
+                  (let ((kv (compute-where (car where) (cdr where))))
                     (if kv
                         (b:merge-bson query kv)
                         query))))
@@ -50,6 +48,9 @@
 (defmethod compute-where ((op null) args)
   nil)
 
+(defmethod compute-where (op args)
+  (compute-where (intern (symbol-name op) :keyword) args))
+
 (defmethod compute-where ((op (eql :=)) args)
   (destructuring-bind (slot-name value) args
     (b:bson (symbol-to-key slot-name) (serialize value))))
@@ -72,6 +73,11 @@
 (defmethod compute-where ((op (eql :and)) args)
   (apply #'b:merge-bson
          (mapcar (lambda (where)
-                     (compute-where (aif (car where) (intern (symbol-name it) :keyword))
-                                    (cdr where)))
+                   (compute-where (car where) (cdr where)))
                  args)))
+
+(defmethod compute-where ((op (eql :or)) args)
+  (b:bson (apply #'m:$or
+                 (mapcar (lambda (where)
+                           (compute-where (car where) (cdr where)))
+                         args))))
