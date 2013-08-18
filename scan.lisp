@@ -69,3 +69,9 @@
   (m :>= m:$>=)
   (m :/= m:$ne))
 
+(defmethod compute-where ((op (eql :and)) args)
+  (apply #'b:merge-bson
+         (mapcar (lambda (where)
+                     (compute-where (aif (car where) (intern (symbol-name it) :keyword))
+                                    (cdr where)))
+                 args)))

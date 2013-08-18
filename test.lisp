@@ -80,6 +80,17 @@
       (is (= 1 (length foos)))
       (is (= 5 (a (car foos)))))))
 
+(deftest test-where-and ()
+  (with-connection ()
+    (clear-strage)
+    (create-instance 'foo :a 1 :b "あ")
+    (create-instance 'foo :a 1 :b "い")
+    (create-instance 'foo :a 2 :b "い")
+    (let ((foos (collect (scan* 'foo :where '(and (= a 1) (= b "い"))))))
+      (is (= 1 (length foos)))
+      (is (= 1 (a (car foos))))
+      (is (string= "い" (b (car foos)))))))
+
 (deftest test-proxy ()
   (with-connection ()
     (clear-strage)
