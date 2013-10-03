@@ -48,11 +48,19 @@ stream in a serializer."))
           (deserialize-object (car x) x)
           x))))
 
+(defmethod deserialize ((bson b:bson))
+  ;; (break "~a" bson)
+  (deserialize-object (intern (string-upcase (b:value bson :tag)) :keyword)
+                      bson))
+
 (defmethod deserialize ((x integer))
   x)
 
 (defmethod deserialize ((x float))
   x)
+
+(defmethod deserialize ((oid b:object-id))
+  oid)
 
 (defgeneric deserialize-object (tag data))
 

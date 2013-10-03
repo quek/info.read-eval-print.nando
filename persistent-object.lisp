@@ -133,7 +133,7 @@ inherit from this class."))
           (create-object object))
          ((dirty-p object)
           (update-object object)))
-  (_id object))
+  (b:bson :tag :proxy :oid (_id object)))
 
 ;;
 ;; Loading objects

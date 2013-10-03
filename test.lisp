@@ -137,8 +137,13 @@
 (deftest test-proxy ()
   (with-connection ()
     (clear-strage)
-    (let ((foo (load-object (_id (create-instance 'foo :a (make-instance 'foo :a :inner))))))
-      (is (eq :inner (a (a foo)))))))
+    (let* ((id (info.read-eval-print.bson:object-id "000000000000000000000000"))
+           (foo (load-object
+                 (_id (create-instance 'foo
+                                       :a (make-instance 'foo :a :inner)
+                                       :b id)))))
+      (is (eq :inner (a (a foo))))
+      (is (equal (princ-to-string id) (princ-to-string (b foo)))))))
 
 (deftest test-update-proxy ()
   (with-connection ()

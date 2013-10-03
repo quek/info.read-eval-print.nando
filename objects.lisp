@@ -478,11 +478,11 @@ modified persistent list. ITEM is evaluated before place."
   ;; When the serializer meets a persistent-data object, it only needs to save
   ;; the object id.  The cache will make sure that the cached object is saved
   ;; elsewhere.
-  (_id object))
+  (b:bson :tag :proxy :oid (_id object)))
 
 (defmethod serialize ((object proxy))
   ;; Proxies are serialized like the cached objects they stand for.
-  (_id object))
+  (b:bson :tag :proxy :oid (_id object)))
 
-(defmethod deserialize ((oid b:object-id))
-  (make-instance 'proxy :_id oid))
+(defmethod deserialize-object ((tag (eql :proxy)) bson)
+  (make-instance 'proxy :_id (b:value bson :oid)))
